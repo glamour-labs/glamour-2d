@@ -22,14 +22,33 @@ map; DECISIONS is the *why* of settled choices; BUILD-NOTES is the build/finding
 - **Proofs** in `sketches/`: progress-ring, toggle-switch, draw-letter-a (tap-through), flappy,
   crab-game, orb / Dolli, and **trace-letter** (Rung 2 — real interactive tracing).
 
-## ⚠️ First thing next session — re-sync the global AI-authoring install
-The work above lives in this worktree. The globally-installed `glam` wrapper + `cast-glamour` skill
-point at the MAIN `~/Project/glamour` checkout, which does NOT yet have v1.1 / Rung 2. Until this
-branch merges to main AND the repo is rebuilt, an AI authoring session that shells out to the global
-`glam` will VALIDATE against the old engine and reject `ellipse`/`arc`/`stroke`/`ink`/gradient docs.
-To use the new features from authoring: merge → `cd ~/Project/glamour && pnpm build` → re-copy the
-skill per `DECISIONS.md` §3. (Toolchain: the global `pnpm` is Node-24-built; under Node 20 use
-`npx -y pnpm@9.15.0`.)
+## ⚠️ THE CUTOVER — the global install still points at v1
+The globally-installed authoring path has NOT moved to v2, deliberately. Both pieces point at
+`~/Project/glamour` (v1):
+
+- `~/.local/bin/glam` — a wrapper that hard-pins Node 20 and runs **v1's** built CLI.
+- `~/.claude/skills/cast-glamour/` — a **COPY**, not a symlink. Editing this repo's
+  `skills/cast-glamour/` does not change what an agent reads.
+
+So today an AI authoring session validates and renders against **v1's engine**, whatever this repo
+says. Flipping those two is the cutover, and it is a real switch: it also means v1 authoring stops
+working, because the wrapper can only point at one repo.
+
+To cut over:
+```bash
+cd ~/Project/glamour-v2 && pnpm build
+cat > ~/.local/bin/glam <<'EOF'
+#!/usr/bin/env bash
+# Glamour CLI wrapper — v2 (WebGL renderer). No Node pin: v2 has no native `canvas`.
+# `render` needs Chromium: npx playwright install chromium
+exec node "$HOME/Project/glamour-v2/packages/cli/dist/cli.js" "$@"
+EOF
+chmod +x ~/.local/bin/glam
+rm -rf ~/.claude/skills/cast-glamour
+cp -R ~/Project/glamour-v2/skills/cast-glamour ~/.claude/skills/cast-glamour
+```
+Then confirm: `glam render <any.glam> -o /tmp/x.png` produces a PNG, and the skill's §4 blockquote
+mentions Chromium rather than Node 20.
 
 ## The mission (why this exists)
 Glamour is the maintainer's **own tool to author complex interactions himself** — no designer, no
@@ -66,19 +85,23 @@ listens to (`on`).
 
 ### Fidelity axis — the paint layer — CHEAP TIER DONE (v1.1)
 - **DONE:** linear/radial `fillGradient`, glow/shadow, `ellipse` node, `arc` node → the ~80% of the
-  reference-orb look that Konva already supported and the format now exposes.
+  reference-orb look the format now exposes (all of it verified against the v2 WebGL renderer via
+  `conformance/paint.glam`).
 - **Hard tail (still open):** halftone/texture body — needs raster-image fill (depends on v2 raster
   work) or a shader. The last ~20% of polish.
 
 ### Smaller logged gaps — status
 - **DONE (v1.1):** `arc` primitive, rounded `rect` corners, spring/elastic easing, bold/`fontStyle`.
-- **Still open:** raster/sprites + SVG import, image→animation, in-app AI chat, WebGL perf path.
-- Residual hygiene: MCP↔core schema dedupe; tighten `SceneHandle`/`KonvaLike` `any` (export from core).
+- **Still open:** raster/sprites + SVG import, image→animation, in-app AI chat.
+- **DONE (v2):** the WebGL renderer — Konva replaced entirely. See `docs/V2-RENDERER.md`.
+- Residual hygiene: MCP↔core schema dedupe. (`KonvaLike`/`any` on the scene is GONE — v2's
+  `NodeHandle` is a concrete exported type.)
 
 ---
 
 ## Environment invariants (every session)
-- **Node 20.19.4** (native `canvas` ABI) — `.nvmrc` pins it; prefix commands with the Node-20 bin.
+- **No Node version pin** — v2 dropped the native `canvas` package with Konva. Headless render and
+  the browser test project need Chromium: `npx playwright install chromium`.
 - **pnpm** (`pnpm install/build/test`); npm still works as a fallback. See `DECISIONS.md` §1.
 - **Local repo, no git remote** — not on npm; consume via the UMD or `pnpm pack` (`USING-GLAMOUR.md`).
 - **Author v0.1 by describing it** → the `cast-glamour` skill / `glamour-smith` agent (installed globally).

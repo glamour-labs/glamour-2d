@@ -12,20 +12,21 @@ vector shapes and text that respond to clicks, host inputs, and a state machine.
 
 ## 0. Setup (today)
 
-> **Heads up — not on npm yet.** v1 is a local monorepo. You install it by cloning + building, not
-> `pnpm add @glam/…`. Publishing to a registry is the first packaging step for v1.1.
+> **Heads up — not on npm yet.** This is a local monorepo. You install it by cloning + building,
+> not `pnpm add @glam/…`. Publishing to a registry is still the first packaging step.
 
 Uses **pnpm** (npm also works — inter-package `*` specs link locally under both, via `link-workspace-packages`).
 
 ```bash
 git clone <repo>  # or: cd ~/Project/glamour
-nvm use           # Node 20.19.4 — REQUIRED (the headless renderer's native `canvas` is Node-20 ABI)
-pnpm install      # native canvas + esbuild builds are pre-approved in pnpm-workspace.yaml
+pnpm install      # no native builds — v2 has no `canvas` dependency
+npx playwright install chromium   # once: headless render + the browser test project need it
 pnpm build        # builds core, player (incl. the UMD bundle), cli, mcp, studio
-pnpm test         # 131 tests, should be green
+pnpm test         # 265 tests, should be green
 ```
 > First time on pnpm: it only runs a dependency's native build script if that package is listed under
-> `onlyBuiltDependencies` in `pnpm-workspace.yaml` (already done here for `canvas` + `esbuild`).
+> `onlyBuiltDependencies` in `pnpm-workspace.yaml` (just `esbuild` now — the native `canvas` package
+> went away with Konva).
 
 The two build outputs you'll actually use downstream:
 - `packages/player/dist/glam-player.umd.js` — the browser player as a plain `<script>` (global `Glam`).
@@ -140,7 +141,10 @@ a known palette instead of guessing — and every path renders-and-checks before
 ## Current limits (honest)
 
 - **Not on npm** — clone + build for now.
-- **Node 20 only** — the native `canvas` (headless render) is built for the Node-20 ABI.
-- **v1 content** is vector + text. Raster/sprites, SVG import, image→animation, in-app chat, a WebGL
-  perf path, and continuous-timeline playback are v2.
-- `<glam-canvas>.player` accessor and an npm publish are the top v1.1 usability items.
+- **Headless render needs Chromium** (`npx playwright install chromium`) and takes ~1–2s per
+  render, rather than being instant in-process. In exchange there is no Node version pin.
+- **Content is vector + text.** Raster/sprites, SVG import, image→animation, in-app chat and
+  continuous-timeline playback are still unbuilt. (The WebGL renderer itself is done — see
+  [V2-RENDERER.md](V2-RENDERER.md).)
+- `<glam-canvas>.player` accessor, an npm publish, and a `fontFamily` field on `text` are the top
+  usability items.

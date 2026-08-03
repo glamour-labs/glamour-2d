@@ -3,6 +3,12 @@
 Durable decision records for Glamour. Read this first in a new session before changing the
 toolchain or packaging — the *why* is here so choices don't get silently reverted.
 
+> **This is an append-only log, not a snapshot.** §1–§4 describe the Konva-era engine and are
+> preserved verbatim because they were true when made. **§5 supersedes them on the toolchain
+> points** — in particular there is no longer a Node 20 / native-`canvas` requirement, `renderToPNG`
+> has moved out of `@glam/core`, and the test count is 265 rather than 131. Read §5 before acting on
+> anything toolchain-related in §1 or §3.
+
 ---
 
 ## 1. Toolchain — pnpm (npm kept working as a fallback)
@@ -128,3 +134,44 @@ relied on that (rather than container CSS) rendered with a transparent/wrong bac
 the headless PNG render. **If you have a v0 doc authored before this fix that sets
 `canvas.bg` expecting it to be a no-op**, it will now render an opaque background — re-check
 any such doc's headless render/screenshot.
+
+## 5. The renderer — Konva replaced by hand-written WebGL2 (v2)
+
+**Decided 2026-08-03.** Entries §1–§4 above describe the Konva-era engine and are
+left as written — they were true when made, and this is a log, not a snapshot.
+
+`glamour-v2` is a fork of this repo with exactly one thing replaced: the
+rasterizer. Konva and the native `canvas` package are gone; the scene is drawn by
+`packages/core/src/gl/`. The `.glam` format, schema ids, state machine, bindings,
+ink, guided strokes, host API and React binding are unchanged, and **every v1
+document loads unedited**.
+
+Why a fork rather than an in-place swap: v1 stays runnable as the **pixel oracle**,
+so "does it still look right" is a measured number instead of a judgement call. It
+is not a dependency; it is the spec.
+
+Consequences that ripple outward:
+
+- **No Node version pin.** The Node-20.19.4 constraint existed only for the native
+  `canvas` ABI. Headless render now drives a real headless Chromium, which also
+  means it rasterizes with the *same* renderer that ships to users — a headless
+  PNG is evidence about production. Cost: ~1–2s per render, and Chromium must be
+  installed.
+- **`renderToPNG` moved** from `@glam/core` to `@glam/player/node`. WebGL has no
+  in-process rasterizer, so it cannot live in core.
+- **Tests split in two.** jsdom has no WebGL context at all; v1 could run
+  everything there only because Konva needed a 2D context, which `canvas`
+  supplied. Scene tests now run in real Chromium.
+- **`buildScene(doc, mount, opts?)`** — no injected Konva. Node handles keep
+  Konva's chainable accessor shape on purpose, which is why the player, run-loop
+  and harness needed almost no changes.
+- **Context loss is now a real failure mode** and is handled explicitly. Canvas2D
+  had no equivalent.
+
+The full engineering account, including the four bugs the gates caught and the
+residual text-rasterizer difference, is in `docs/V2-RENDERER.md`.
+
+**Not yet done:** the global authoring install (`~/.local/bin/glam` and the
+`~/.claude/skills/cast-glamour` copy) still points at v1. See ROADMAP §"THE
+CUTOVER" — flipping it is a deliberate switch, because the wrapper can only point
+at one repo.

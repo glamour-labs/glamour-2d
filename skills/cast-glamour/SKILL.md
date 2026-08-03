@@ -110,7 +110,7 @@ See `reference/palette.md` for full call examples and `reference/schema.md` for 
    ```
    glam new /tmp/my-scene.glam
    ```
-   (`glam` is a global wrapper → the built repo CLI on Node 20; see §4 if it reports a missing build.)
+   (`glam` is a global wrapper → the built repo CLI; see §4 if it reports a missing build.)
 2. **Compose with the palette** where a pattern matches (hover, toggle, progress, fade). Write a small script that does `applyOps(doc, palette.hoverGrow('orb'))` etc., or hand-edit the JSON directly using the addressing rules in §1 — both are valid, palette composition is preferred for the four covered patterns.
 3. **Hand-write `nodes` / `machine` / `bind`** for anything outside the palette, following §1's addressing rules exactly. Keep `machine.initial` pointed at a real state; keep every `on` target a real state name.
 4. **Run the self-verify loop (§4) — mandatory, every time.**
@@ -119,12 +119,16 @@ See `reference/palette.md` for full call examples and `reference/schema.md` for 
 
 Never hand back a `.glam` that hasn't been validated and rendered. This is not optional polish — it is the acceptance ritual for anything this skill produces.
 
-> **The `glam` command** is a global wrapper (`~/.local/bin/glam`) that runs the built CLI from
-> `~/Project/glamour` under Node 20 (the native `canvas` ABI) — so it works from any directory, no
-> PATH juggling. If `glam` errors that a build is missing, build the repo once:
+> **The `glam` command** is a global wrapper (`~/.local/bin/glam`) that runs the built CLI from the
+> Glamour repo — so it works from any directory, no PATH juggling. There is no Node version pin any
+> more (the native `canvas` package went away with Konva). If `glam` errors that a build is missing:
 > ```
-> cd ~/Project/glamour && pnpm build
+> cd ~/Project/glamour-v2 && pnpm build
 > ```
+>
+> **`render` needs Chromium.** The renderer is WebGL2, which has no in-process rasterizer, so
+> headless render drives a real browser: `npx playwright install chromium` once. A render takes
+> ~1–2s rather than being instant — budget for that, but do NOT skip it.
 
 Then, for every `.glam` you write or edit:
 ```
@@ -132,7 +136,7 @@ glam validate <file.glam>
 glam render   <file.glam> -o /tmp/glam-preview.png
 ```
 - `validate` must print `ok` and exit 0. If it doesn't, the stderr lines name the exact offending node/state/bind — fix and re-run, don't guess.
-- `render` must produce a PNG file. Read it back (image tool / file size / PNG magic bytes `89 50 4E 47`) and actually look at it — confirm the shapes, colors, and layout match intent before calling the work done.
+- `render` must produce a PNG file. Read it back (image tool / file size / PNG magic bytes `89 50 4E 47`) and actually look at it — confirm the shapes, colors, and layout match intent before calling the work done. A blank or near-empty PNG usually means Chromium is missing or WebGL2 was unavailable, not that the doc is wrong.
 - Optional: `glam preview <file.glam>` serves a live interactive page (`glam-canvas` + UMD player) at a printed URL for a human/browser-QC check of pointer behavior. Close it when done — don't leave dev servers running.
 
 If validate or render fails, that is the loop working as intended: fix the doc and re-run both steps until they pass. Deliver the file path (and PNG path if rendered) only after this passes.
@@ -146,7 +150,7 @@ drift, node grouping, and a host-driving API. Full shapes + validation rules in
 `reference/schema.md`; the summary here is what to actually reach for.
 
 **`groups` + `node.group` (nesting).** `doc.groups: { id, x, y }[]` declares a
-Konva-style group at an absolute position; any node opts in via `node.group:
+A positioned group; any node opts in via `node.group:
 "<groupId>"`. A group's own `x`/`y` can be bound/set/looped/wandered like a
 node's — moving it slides every child with it (e.g. a whole face).
 
@@ -160,7 +164,7 @@ node's — moving it slides every child with it (e.g. a whole face).
 **`loops` (continuous motion).** `doc.loops: { node, prop, from, to, ms, mode?,
 ease? }[]` drives one numeric prop back and forth forever, no host input
 needed. `node` can be a node id OR a group id (group loops are restricted to
-`x`/`y` — that's all a Konva.Group exposes). `ms` is the **full round-trip
+`x`/`y` — position is all a group exposes). `ms` is the **full round-trip
 period**. `mode: "loop"` (default) sawtooths `from → to` and wraps; `mode:
 "alternate"` ping-pongs `from → to → from`, peaking at `ms/2`. Use `alternate`
 for back-and-forth motion (a crab pacing), `loop` for wrap-and-repeat (a

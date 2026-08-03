@@ -62,34 +62,36 @@ One document (`.glam`), several ways to author and play it:
 - `on` keys are `node.event` (pointer: `click`/`hover`/`leave`) or an input condition (`"progress > 0.5"`).
 - `set` targets are `node.prop`. `bind` expressions are a tiny safe vocabulary (`lerp`, `clamp`, arithmetic).
 - The runtime is *timelines + an XState statechart fed by named inputs* — pointer listeners and host
-  code both feed those inputs. Built on Konva (render + hit-testing) and XState (statechart).
+  code both feed those inputs. Built on a hand-written WebGL2 renderer (drawing + hit-testing)
+  and XState (statechart). See [docs/V2-RENDERER.md](docs/V2-RENDERER.md).
 
 ## Quickstart
 
-> **Node 20 required.** The native `canvas` dependency (headless render) is built for the Node 20
-> ABI. This repo pins it via `.nvmrc`; run `nvm use` (or `nvm install`) first.
+> **No Node version pin.** v2 dropped the native `canvas` package along with Konva, so the
+> Node-20 ABI constraint is gone. Headless render drives a real headless Chromium instead —
+> install it once with `npx playwright install chromium`.
 
 This repo uses **pnpm** (npm also works — the `*` workspace specs link locally under both).
 
 ```bash
-nvm use                 # → Node 20.19.4
-pnpm install            # builds native canvas (pre-approved via pnpm-workspace.yaml)
+pnpm install
+npx playwright install chromium   # once — headless render + the browser test project
 pnpm build
-pnpm test               # all tests across every surface
+pnpm test               # all tests across every surface (node + real-Chromium projects)
 pnpm --filter @glam/studio dev   # the visual Studio
 ```
 
 ## The `glam` CLI
 
 The whole authoring + self-verify loop is four commands. `glam` is a global wrapper
-(`~/.local/bin/glam`) that runs the built CLI under Node 20; from a fresh checkout you can
-also call `node packages/cli/dist/cli.js <cmd>`.
+(`~/.local/bin/glam`) that runs the built CLI; from a fresh checkout you can also call
+`node packages/cli/dist/cli.js <cmd>`.
 
 | Command | What it does |
 |---|---|
 | `glam new <file.glam>` | write a starter `.glam` to edit from |
 | `glam validate <file.glam>` | check the doc against the schema + every semantic rule; prints `ok` / names the offending node/state/bind |
-| `glam render <file.glam> -o <out.png>` | headless-render the **resting frame** to a PNG (look at it — the self-verify loop) |
+| `glam render <file.glam> -o <out.png>` | headless-render the **resting frame** to a PNG via headless Chromium, ~1–2s (look at it — the self-verify loop) |
 | `glam preview <file.glam>` | serve a live, interactive page (real pointer/drag behavior) at a printed URL |
 
 ```bash
@@ -133,7 +135,7 @@ and all six surfaces. Spike-proven before the build (`docs/superpowers/spikes/`)
 **v0.1 — living canvas** (additive over v1; the first rung toward covering Rive-class interactions):
 - **`loops`** — continuous auto-playing motion (`mode: loop | alternate`), on a node or a group's x/y.
 - **`wander`** — free drift to random points in an ellipse (a node or group).
-- **`groups`** — a `Konva.Group` (`node.group`) so several nodes move as one.
+- **`groups`** — a positioned group (`node.group`) so several nodes move as one.
 - **Host API** — the player is now *driven and listened to* like the Rive runtime: `player.send('EVENT')`
   (host commands a state, via machine `@EVENT` on-keys), `player.on(cb)` (host hears a `node.emit` click),
   `play` / `pause`. **The host app keeps the logic** (scoring, correctness) — Glamour owns motion + input.
