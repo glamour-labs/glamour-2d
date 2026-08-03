@@ -29,7 +29,7 @@ The global authoring path now runs v2. All three artifacts were repointed:
 | Artifact | Now |
 |---|---|
 | `~/.local/bin/glam` | `node ~/Project/glamour-v2/packages/cli/dist/cli.js` — **no Node pin** |
-| `~/.claude/skills/cast-glamour/` | copied from this repo (it is a COPY, not a symlink — re-copy after editing) |
+| `~/.claude/skills/cast-glamour/` | **symlink** → `~/Project/glamour-v2/skills/cast-glamour` (edits are live; nothing to re-copy) |
 | `~/.claude/agents/glamour-smith.md` | Node-20 block replaced by the Chromium prerequisite |
 
 Verified from a neutral directory on **Node 24** (v1 cannot run there at all — it needs the Node-20
@@ -42,10 +42,32 @@ Backup of the pre-cutover artifacts: `~/.glamour-cutover-backup-<timestamp>/`.
 oracle for both parity gates. Its README carries the banner. A stale `dist/` there has already
 produced one wrong parity result — if the gates ever look suspiciously good or bad, rebuild v1 first.
 
-**After editing `skills/cast-glamour/` in this repo, re-copy it** or agents keep reading the old text:
+The skill is a **symlink**, so editing `skills/cast-glamour/` here is immediately live — no re-copy
+step, and it cannot silently drift the way the old copy did. Trade-off: moving or deleting this repo
+breaks the skill. If it ever needs to be a copy again, `cp -R` over the symlink.
+
+## The oracle must stay fresh — now enforced
+
+Both parity gates refuse to run against a stale oracle (`exit 2`) rather than reporting confident
+nonsense. `scripts/oracle-freshness.mjs` checks two things: v1's `dist/` newer than its `src/`, and
+the reference PNGs newer than that `dist/`. Verified in both directions — the guard fires on a stale
+build and stands down on a fresh one.
+
+Rebuilding v1 therefore invalidates the references, which is what the second check catches. One
+command puts it right:
+
 ```bash
-rm -rf ~/.claude/skills/cast-glamour && cp -R ~/Project/glamour-v2/skills/cast-glamour ~/.claude/skills/cast-glamour
+node scripts/gen-oracle.mjs /tmp/glam-oracle     # renders every .glam with v1's CLI (via Node 20)
+node scripts/parity.mjs      /tmp/glam-oracle parity-out
+node scripts/frame-parity.mjs ~/Project/glamour  frame-parity-out
 ```
+
+`gen-oracle.mjs` invokes v1's CLI through Node 20.19.4 explicitly — v1 still needs that ABI for its
+native `canvas`, which is exactly the pin v2 dropped.
+
+Note: `pnpm -r build` in v1 FAILS at `apps/studio` (the pre-existing `onGuided` mock bug). The oracle
+packages still build, so this is survivable — but build `--filter @glam/core --filter @glam/player
+--filter @glam/cli` if you want a clean exit.
 
 ## The mission (why this exists)
 Glamour is the maintainer's **own tool to author complex interactions himself** — no designer, no

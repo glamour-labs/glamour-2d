@@ -83,11 +83,16 @@ document passes when fewer than 2% of pixels differ by more than 24/255.
 Current status: **18/19 MATCH**. The one DIFF is `conformance/text-and-stroke.glam`
 at 3.09%, entirely attributable to text (see Known residuals).
 
-> **BUILD v1 BEFORE GENERATING THE ORACLE.** v1's `dist/` was a day stale, so the
+> **Staleness is now enforced, not just documented.** Both gates exit 2 rather than
+> run against a stale oracle — `scripts/oracle-freshness.mjs` checks that v1's
+> `dist/` is newer than its `src/`, and that the reference PNGs are newer than that
+> `dist/`. Regenerate references with `node scripts/gen-oracle.mjs <dir>`.
+>
+> This exists because it already went wrong: v1's `dist/` was a day stale, so the
 > first oracle was generated from out-of-date v1 behaviour and quietly mis-scored
-> several documents — `dash` in particular was absent from the stale bundle, which
-> inflated every dashed doc's diff (`letter-h-easy` read 1.03%; against a correct
-> oracle it is 0.10%). An oracle is only a spec if it is built from current source.
+> several documents — `dash` was absent from the stale bundle entirely, inflating
+> every dashed doc's diff (`letter-h-easy` read 1.03%; against a correct oracle it
+> is 0.10%). An oracle is only a spec if it is built from current source.
 
 Excluded:
 - `sketches/draw-letter-a/letter-a.glam`, `sketches/trace-letter/letter-a.glam` —

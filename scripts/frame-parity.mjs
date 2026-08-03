@@ -40,6 +40,7 @@
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
+import { assertOracleBuildFresh } from './oracle-freshness.mjs';
 
 const v1Repo = process.argv[2];
 const outDir = process.argv[3] ?? 'frame-parity-out';
@@ -56,6 +57,15 @@ for (const b of [V1_BUNDLE, V2_BUNDLE]) {
   }
 }
 mkdirSync(outDir, { recursive: true });
+
+// This gate renders v1 live from its build, so only the build itself can be stale
+// (there are no pre-rendered references to go out of date).
+try {
+  assertOracleBuildFresh(v1Repo);
+} catch (err) {
+  console.error(`\n${err.message}\n`);
+  process.exit(2);
+}
 
 /* ------------------------------- discovery -------------------------------- */
 
