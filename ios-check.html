@@ -1,0 +1,179 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Glamour v2 — iOS / WebKit check</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 16px 14px 48px; font: 15px/1.5 -apple-system, system-ui, sans-serif;
+         background: #f4f6f9; color: #1a1d23; }
+  @media (prefers-color-scheme: dark) { body { background: #14171c; color: #e6e9ef; } }
+  h1 { font-size: 19px; margin: 0 0 2px; }
+  p.sub { margin: 0 0 16px; opacity: .7; font-size: 13px; }
+  section { background: #fff; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  @media (prefers-color-scheme: dark) { section { background: #1d2128; box-shadow: none; } }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: .55;
+       margin: 0 0 10px; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  td { padding: 3px 0; vertical-align: top; }
+  td:first-child { opacity: .6; padding-right: 10px; white-space: nowrap; }
+  td:last-child { font-family: ui-monospace, Menlo, monospace; word-break: break-word; }
+  .ok { color: #1a8f3c; font-weight: 600; }
+  .bad { color: #d92b2b; font-weight: 600; }
+  .warn { color: #b07d00; font-weight: 600; }
+  canvas { display: block; max-width: 100%; height: auto; border-radius: 8px;
+           background: #fff; touch-action: none; }
+  .canvasWrap { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  .hint { font-size: 12px; opacity: .6; text-align: center; }
+  button { font: inherit; font-weight: 600; padding: 11px 16px; border-radius: 10px;
+           border: 0; background: #1c9ff2; color: #fff; width: 100%; margin-top: 4px; }
+  #log { font-family: ui-monospace, Menlo, monospace; font-size: 11px; white-space: pre-wrap;
+         background: #0d1015; color: #b9e6ff; padding: 10px; border-radius: 8px;
+         max-height: 180px; overflow: auto; margin-top: 8px; }
+  .row { display: flex; gap: 8px; }
+</style>
+
+<h1>Glamour v2 — WebKit check</h1>
+<p class="sub">v2 has no Canvas2D fallback. If WebGL2 is missing here, nothing renders.</p>
+
+<section>
+  <h2>1 · Capabilities</h2>
+  <table id="caps"></table>
+</section>
+
+<section>
+  <h2>2 · Interaction — drag the blue handle</h2>
+  <div class="canvasWrap">
+    <div id="mount-h"></div>
+    <div class="hint">Should ink the letter and fire <code>traced</code>. Tests touch + guided drag.</div>
+  </div>
+  <div id="events" class="hint" style="margin-top:8px"></div>
+</section>
+
+<section>
+  <h2>3 · Paint — gradients, glow, drop shadow</h2>
+  <div class="canvasWrap">
+    <div id="mount-paint"></div>
+    <div class="hint">Glow must sit <em>behind</em> the cyan orb, shadow down-right of the white bar.</div>
+  </div>
+</section>
+
+<section>
+  <h2>4 · Shapes — ellipse, arc, rounded rect, stroked outlines</h2>
+  <div class="canvasWrap">
+    <div id="mount-shapes"></div>
+    <div class="hint">Every outline ring must be present — a missing ring means the stroke pass failed.</div>
+  </div>
+</section>
+
+<section>
+  <h2>5 · Report</h2>
+  <button id="copy">Copy diagnostics</button>
+  <div id="log">collecting…</div>
+</section>
+
+<script src="/packages/player/dist/glam-player.umd.js"></script>
+<script>
+(async () => {
+  const lines = [];
+  const log = (s) => { lines.push(s); document.getElementById('log').textContent = lines.join('\n'); };
+  const capsEl = document.getElementById('caps');
+  const row = (k, v, cls) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${k}</td><td class="${cls || ''}">${v}</td>`;
+    capsEl.appendChild(tr);
+    lines.push(`${k}: ${String(v).replace(/<[^>]*>/g, '')}`);
+  };
+
+  /* ---- 1. capabilities ------------------------------------------------- */
+  const probe = document.createElement('canvas');
+  const gl = probe.getContext('webgl2', { stencil: true, antialias: true, preserveDrawingBuffer: true });
+
+  row('UA', navigator.userAgent);
+  row('devicePixelRatio', window.devicePixelRatio);
+  row('WebGL2', gl ? 'YES' : 'NO — v2 cannot render', gl ? 'ok' : 'bad');
+
+  if (gl) {
+    // The whole antialiasing strategy depends on a per-sample stencil on the
+    // DEFAULT framebuffer. If stencil bits are 0, or samples is 0 while
+    // antialias was requested, edges will look wrong on this device.
+    const stencilBits = gl.getParameter(gl.STENCIL_BITS);
+    const samples = gl.getParameter(gl.SAMPLES);
+    const attrs = gl.getContextAttributes ? gl.getContextAttributes() : {};
+    row('STENCIL_BITS', stencilBits, stencilBits > 0 ? 'ok' : 'bad');
+    row('SAMPLES (MSAA)', samples, samples > 0 ? 'ok' : 'warn');
+    row('antialias granted', String(attrs.antialias), attrs.antialias ? 'ok' : 'warn');
+    row('stencil granted', String(attrs.stencil), attrs.stencil ? 'ok' : 'bad');
+    row('preserveDrawingBuffer', String(attrs.preserveDrawingBuffer));
+    row('MAX_TEXTURE_SIZE', gl.getParameter(gl.MAX_TEXTURE_SIZE));
+    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+    row('GL renderer', dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : '(masked)');
+    row('GL version', gl.getParameter(gl.VERSION));
+  }
+  row('OffscreenCanvas', typeof OffscreenCanvas !== 'undefined' ? 'YES' : 'no (falls back to <canvas>)',
+      typeof OffscreenCanvas !== 'undefined' ? 'ok' : 'warn');
+  row('PointerEvent', typeof PointerEvent !== 'undefined' ? 'YES' : 'NO — drag will not work',
+      typeof PointerEvent !== 'undefined' ? 'ok' : 'bad');
+  row('Glam global', window.Glam ? Object.keys(window.Glam).length + ' exports' : 'MISSING',
+      window.Glam ? 'ok' : 'bad');
+
+  if (!gl || !window.Glam) {
+    log('\nSTOPPED — cannot render without WebGL2 + the player bundle.');
+    return;
+  }
+
+  /* ---- 2..4. render the three probes ----------------------------------- */
+  const load = async (url) => (await fetch(url)).json();
+  const mountOne = async (mountId, url, label) => {
+    try {
+      const doc = await load(url);
+      const player = window.Glam.renderGlamour(doc, document.getElementById(mountId));
+      const cv = document.getElementById(mountId).querySelector('canvas');
+      // Confirm the canvas is genuinely WebGL-backed on THIS device.
+      const is2d = cv && cv.getContext('2d') !== null;
+      log(`${label}: canvas ${cv ? cv.width + 'x' + cv.height : 'MISSING'}` +
+          `, webgl-backed=${cv ? !is2d : 'n/a'}`);
+      return player;
+    } catch (err) {
+      log(`${label}: FAILED — ${err.message}`);
+      return null;
+    }
+  };
+
+  const hPlayer = await mountOne('mount-h', '/sketches/draw-letter/letter-h-easy.glam', 'letter-h');
+  await mountOne('mount-paint', '/conformance/paint.glam', 'paint');
+  await mountOne('mount-shapes', '/conformance/shapes.glam', 'shapes');
+
+  if (hPlayer) {
+    const ev = document.getElementById('events');
+    hPlayer.on((e) => { ev.textContent = `emit: ${e.event} (from ${e.node})`; log(`EVENT emit ${e.event}`); });
+    if (hPlayer.onGuided) {
+      hPlayer.onGuided((e) => {
+        ev.textContent = `guided: stroke ${e.stroke ?? '?'} progress ${(e.progress ?? 0).toFixed(2)}`
+          + (e.done ? ' DONE' : '');
+      });
+    }
+  }
+
+  /* ---- surface any runtime error --------------------------------------- */
+  window.addEventListener('error', (e) => log(`JS ERROR: ${e.message}`));
+  window.addEventListener('unhandledrejection', (e) => log(`PROMISE REJECTION: ${e.reason}`));
+
+  log('\nrendered — now drag the handle in section 2.');
+
+  document.getElementById('copy').addEventListener('click', async () => {
+    const text = lines.join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      document.getElementById('copy').textContent = 'Copied — paste it to Claude';
+    } catch {
+      // Clipboard needs a user gesture + secure context; select as a fallback.
+      const r = document.createRange();
+      r.selectNodeContents(document.getElementById('log'));
+      getSelection().removeAllRanges();
+      getSelection().addRange(r);
+      document.getElementById('copy').textContent = 'Select-all shown — copy manually';
+    }
+  });
+})();
+</script>
