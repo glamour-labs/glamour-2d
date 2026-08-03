@@ -182,6 +182,26 @@ A third, smaller fidelity gap: `tension` was a generic cardinal spline, which
 drifted ~4% at tension 0.5. It is now a faithful port of Konva's
 `_getControlPoints` / `_expandPoints` plus curve flattening — 4.41% → 2.02%.
 
+## Device verification
+
+**iOS — PASSED (2026-08-03).** Tested on-device by the King via `ios-check.html`
+over Tailscale, in both Safari and Chrome-for-iOS. WebGL2 is present, all three
+probe canvases render, and the guided drag works under touch.
+
+What that establishes: v2 runs on WebKit, which was the largest open risk — v2 has
+no Canvas2D fallback, so a WebGL2 gap there would have been a blank canvas rather
+than a degraded one.
+
+What it does NOT establish, and is still open:
+- Chrome on iOS is WebKit underneath, so this is **one engine** verified, not two.
+  Desktop Safari is a separate (lower-risk) target.
+- The capability numbers — `STENCIL_BITS`, `SAMPLES` — were not captured. If MSAA
+  came back 0, edges would be aliased yet still look acceptable at a glance on a
+  retina screen, so the eye is not a substitute for those two values.
+- Pixel-level correctness at devicePixelRatio 2/3. Every gate renders at dpr 1.
+- Context loss (see Known residuals).
+- Performance on device.
+
 ## Known residuals
 
 - **Text cannot be pixel-identical across the two backends.** node-canvas
@@ -197,6 +217,12 @@ drifted ~4% at tension 0.5. It is now a faithful port of Konva's
 - **`tension` on a *closed* stroke** still uses the cardinal spline; Konva has a
   separate closed-line routine. Closed tensioned strokes in the corpus are
   low-tension fills that agree within threshold (1.23%).
+- **No WebGL context-loss handling.** A WebGL context can be lost — backgrounded
+  tab, GPU reset, memory pressure — and the canvas then goes blank permanently.
+  Canvas2D has no equivalent failure mode, so v1 never needed this and v2 has not
+  added it. This is the most consequential remaining gap for a long student
+  session: `webglcontextlost` / `webglcontextrestored` need handling that rebuilds
+  the scene. Not a parity issue, which is why no gate here can see it.
 
 ## Latent v1 bugs this port surfaced
 
