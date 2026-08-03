@@ -4,9 +4,8 @@ packages:
   - "skills/*"
   - "examples/*"
 
-# pnpm (v9+) blocks postinstall/native build scripts by default. These two
-# genuinely need to build: canvas (headless renderer, Node-ABI native binary)
-# and esbuild (tsup/vite fetch a platform binary).
+# pnpm (v9+) blocks postinstall/native build scripts by default. v2 dropped the
+# native `canvas` package with Konva — headless render is a real browser now — so
+# only esbuild (tsup/vite fetch a platform binary) needs pre-approval.
 onlyBuiltDependencies:
-  - canvas
   - esbuild
