@@ -94,6 +94,58 @@ Excluded:
   legacy and unused (King, 2026-08-03), and dominated by one huge glyph, so they
   measure the two rasterizers' font engines rather than this renderer.
 
+## The frame-sequence gate
+
+The static gate above diffs ONE resting frame per document, which proves nothing
+about `loops`, `wander`, or the tween engine — and v2's tween engine and rAF
+ticker are both hand-written replacements for Konva's.
+
+```bash
+node scripts/frame-parity.mjs ~/Project/glamour frame-parity-out
+# exit 0 = pass, 1 = fail.  GLAM_FRAMES=41 for a longer run.
+```
+
+Two independent checks:
+
+- **A. Easing math** — every `Ease` name sampled at 101 phases in both
+  implementations and compared numerically. Konva exposes easings as full
+  interpolators `(time, begin, change, duration)`, so they are normalized to a
+  phase→phase curve first. All six agree to float noise (max |Δ| 2.2e-16).
+- **B. Frame sequence** — each animated document driven through identical
+  **virtual** timestamps in both versions, diffed frame by frame. Currently
+  **4/4 MATCH**, worst 0.42%.
+
+Determinism comes from two page-level shims installed *before* the player bundle
+loads, so no test hooks are needed and both versions are treated identically:
+
+1. `requestAnimationFrame` + `performance.now` + `Date.now` are replaced with a
+   hand-stepped clock. Konva's own `Animation` engine and v2's ticker both ride
+   it. (The players' `__tick` seam is NOT usable for this: `tick()` writes node
+   props but does not redraw, and the redraw is owned by the very rAF loop we
+   need to control.)
+2. `Math.random` is a seeded LCG, **reset after scene construction and before
+   motion starts**. That reset is load-bearing: Konva assigns every shape a
+   random hit-test colour key, so v1 consumes draws during construction that v2
+   does not. Sharing one continuous stream gave the two versions different wander
+   trajectories and showed up as a phantom ~1.7pp diff — orb read 1.97% before
+   the reset and 0.42% after.
+
+**Threshold is 0.8%, not the static gate's 2%.** 2% was calibrated for text
+antialiasing and no animated document contains text. Verified by mutation testing
+in both directions: clean baselines measure 0.10–0.42%, while an injected 40ms
+loop phase shift measures 1.04–1.66% — which at 2% reported MATCH. The gate now
+fails that mutation with exit 1 and writes the worst-frame pair to disk.
+
+Out of scope, deliberately: pixel parity for tween *transitions*. Those fire from
+a node click, and the two versions dispatch clicks through different event systems
+(Konva's hit graph vs v2's analytic hit-test), so a simulated click is not a
+like-for-like input. Check A covers the interpolation math instead.
+
+> **A mutation test only proves anything if the mutation reaches the tested
+> artifact.** The first attempt rebuilt `@glam/core` only — but check B reads the
+> *player's* UMD bundle, which bundles core. The mutation never shipped, the gate
+> reported MATCH, and it briefly looked blind. Always `pnpm -r build`.
+
 ### Conformance documents
 
 The 18 real documents only exercise `circle`, `rect`, `text` and `stroke`. Parity

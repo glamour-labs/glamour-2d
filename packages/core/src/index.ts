@@ -36,6 +36,7 @@ export {
   NON_NEGATIVE_PROPS,
   StageShim,
   LayerShim,
+  applyEaseForTest,
 } from './scene.js';
 export type { SceneHandle, GlamNodeHandle, NodeHandle, BuildSceneOpts } from './scene.js';
 // NOTE: `renderToPNG` is no longer exported from core. The WebGL backend has no

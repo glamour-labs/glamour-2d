@@ -414,6 +414,15 @@ interface Tween {
   clamp: boolean;
 }
 
+/**
+ * The tween easing curves. Exported as `applyEaseForTest` so the frame-parity
+ * gate can compare them numerically against Konva.Easings — the curve itself is
+ * the thing most likely to be subtly wrong, and pixels are a poor way to see it.
+ */
+export function applyEaseForTest(name: string, phase: number): number {
+  return applyEase(name, phase);
+}
+
 function applyEase(name: string, phase: number): number {
   switch (name) {
     case 'easeIn': return phase * phase;
