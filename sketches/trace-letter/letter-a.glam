@@ -1,0 +1,31 @@
+{
+  "schema": "glamour/v0.1",
+  "canvas": { "w": 360, "h": 440, "bg": "#ffffff" },
+  "nodes": [
+    { "id": "midline", "type": "rect", "x": 40, "y": 150, "w": 280, "h": 2, "fill": "#ededed" },
+    { "id": "baseline", "type": "rect", "x": 40, "y": 380, "w": 280, "h": 2, "fill": "#ededed" },
+    { "id": "title", "type": "text", "x": 30, "y": 30, "text": "Trace the a — follow the arrow", "size": 22, "fill": "#4b4b4b" },
+
+    { "id": "ghostA", "type": "text", "x": 118, "y": 138, "text": "a", "size": 210, "fill": "#dcdedf" },
+
+    { "id": "spark0", "type": "rect", "x": 180, "y": 94, "w": 18, "h": 18, "rotation": 45, "fill": "#ffc800", "opacity": 0 },
+    { "id": "spark1", "type": "rect", "x": 300, "y": 173, "w": 13, "h": 13, "rotation": 45, "fill": "#ffe08a", "opacity": 0 },
+    { "id": "spark2", "type": "rect", "x": 300, "y": 319, "w": 18, "h": 18, "rotation": 45, "fill": "#ffc800", "opacity": 0 },
+    { "id": "spark3", "type": "rect", "x": 180, "y": 398, "w": 13, "h": 13, "rotation": 45, "fill": "#ffe08a", "opacity": 0 },
+    { "id": "spark4", "type": "rect", "x": 50, "y": 319, "w": 18, "h": 18, "rotation": 45, "fill": "#ffc800", "opacity": 0 },
+    { "id": "spark5", "type": "rect", "x": 50, "y": 173, "w": 13, "h": 13, "rotation": 45, "fill": "#ffe08a", "opacity": 0 },
+
+    { "id": "arrowCircle", "type": "circle", "x": 250, "y": 232, "r": 24, "fill": "#1cb0f6" },
+    { "id": "arrowShaft", "type": "rect", "x": 259.61, "y": 239.79, "w": 24, "h": 6, "rotation": 205, "fill": "#ffffff" },
+    { "id": "arrowHead1", "type": "rect", "x": 238.45, "y": 224.01, "w": 13, "h": 6, "rotation": 347, "fill": "#ffffff" },
+    { "id": "arrowHead2", "type": "rect", "x": 241.8, "y": 225.57, "w": 13, "h": 6, "rotation": 423, "fill": "#ffffff" },
+    { "id": "startDot", "type": "circle", "x": 232, "y": 240, "r": 9, "fill": "#35c46a" },
+
+    { "id": "ink", "type": "stroke", "x": 0, "y": 0, "points": [], "stroke": "#2f6bd8", "strokeWidth": 13, "tension": 0.05 }
+  ],
+  "ink": {
+    "into": "ink",
+    "emit": "traced",
+    "match": { "target": [232, 240, 205, 226, 168, 232, 143, 262, 145, 300, 175, 322, 212, 314, 232, 286, 233, 250, 236, 285, 238, 320], "tolerance": 34 }
+  }
+}

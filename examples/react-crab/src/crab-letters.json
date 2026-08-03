@@ -1,0 +1,114 @@
+{
+  "target": "P",
+  "total": 5,
+  "crabs": [
+    {
+      "body": "r0c0_body",
+      "clawL": "r0c0_clawL",
+      "clawR": "r0c0_clawR",
+      "letter": "P"
+    },
+    {
+      "body": "r0c1_body",
+      "clawL": "r0c1_clawL",
+      "clawR": "r0c1_clawR",
+      "letter": "P"
+    },
+    {
+      "body": "r0c2_body",
+      "clawL": "r0c2_clawL",
+      "clawR": "r0c2_clawR",
+      "letter": "S"
+    },
+    {
+      "body": "r0c3_body",
+      "clawL": "r0c3_clawL",
+      "clawR": "r0c3_clawR",
+      "letter": "U"
+    },
+    {
+      "body": "r0c4_body",
+      "clawL": "r0c4_clawL",
+      "clawR": "r0c4_clawR",
+      "letter": "E"
+    },
+    {
+      "body": "r0c5_body",
+      "clawL": "r0c5_clawL",
+      "clawR": "r0c5_clawR",
+      "letter": "F"
+    },
+    {
+      "body": "r1c0_body",
+      "clawL": "r1c0_clawL",
+      "clawR": "r1c0_clawR",
+      "letter": "H"
+    },
+    {
+      "body": "r1c1_body",
+      "clawL": "r1c1_clawL",
+      "clawR": "r1c1_clawR",
+      "letter": "G"
+    },
+    {
+      "body": "r1c2_body",
+      "clawL": "r1c2_clawL",
+      "clawR": "r1c2_clawR",
+      "letter": "D"
+    },
+    {
+      "body": "r1c3_body",
+      "clawL": "r1c3_clawL",
+      "clawR": "r1c3_clawR",
+      "letter": "N"
+    },
+    {
+      "body": "r1c4_body",
+      "clawL": "r1c4_clawL",
+      "clawR": "r1c4_clawR",
+      "letter": "J"
+    },
+    {
+      "body": "r1c5_body",
+      "clawL": "r1c5_clawL",
+      "clawR": "r1c5_clawR",
+      "letter": "N"
+    },
+    {
+      "body": "r2c0_body",
+      "clawL": "r2c0_clawL",
+      "clawR": "r2c0_clawR",
+      "letter": "K"
+    },
+    {
+      "body": "r2c1_body",
+      "clawL": "r2c1_clawL",
+      "clawR": "r2c1_clawR",
+      "letter": "E"
+    },
+    {
+      "body": "r2c2_body",
+      "clawL": "r2c2_clawL",
+      "clawR": "r2c2_clawR",
+      "letter": "N"
+    },
+    {
+      "body": "r2c3_body",
+      "clawL": "r2c3_clawL",
+      "clawR": "r2c3_clawR",
+      "letter": "P"
+    },
+    {
+      "body": "r2c4_body",
+      "clawL": "r2c4_clawL",
+      "clawR": "r2c4_clawR",
+      "letter": "P"
+    },
+    {
+      "body": "r2c5_body",
+      "clawL": "r2c5_clawL",
+      "clawR": "r2c5_clawR",
+      "letter": "P"
+    }
+  ]
+}

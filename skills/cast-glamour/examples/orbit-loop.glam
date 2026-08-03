@@ -1,0 +1,19 @@
+{
+  "schema": "glamour/v0.1",
+  "canvas": { "w": 300, "h": 200, "bg": "#12151b" },
+  "nodes": [
+    { "id": "dot", "type": "circle", "x": 40, "y": 40, "r": 10, "fill": "#4c7dff" },
+    { "id": "eyeL", "type": "circle", "x": -10, "y": -5, "r": 4, "fill": "#ffffff", "group": "face" },
+    { "id": "eyeR", "type": "circle", "x": 10, "y": -5, "r": 4, "fill": "#ffffff", "group": "face" },
+    { "id": "mouth", "type": "circle", "x": 0, "y": 8, "r": 3, "fill": "#ffffff", "group": "face" }
+  ],
+  "groups": [
+    { "id": "face", "x": 150, "y": 150 }
+  ],
+  "loops": [
+    { "node": "dot", "prop": "x", "from": 40, "to": 260, "ms": 2000, "mode": "alternate", "ease": "easeInOut" }
+  ],
+  "wander": [
+    { "target": "face", "cx": 150, "cy": 150, "rx": 60, "ry": 30, "stepMs": 1500 }
+  ]
+}

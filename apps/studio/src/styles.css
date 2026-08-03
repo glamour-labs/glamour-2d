@@ -1,0 +1,263 @@
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #0f1115;
+  color: #e6e8ee;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.studio-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.studio-header {
+  padding: 12px 20px;
+  border-bottom: 1px solid #23262e;
+  background: #14161c;
+}
+
+.studio-header h1 {
+  font-size: 16px;
+  margin: 0;
+  font-weight: 600;
+  color: #e6e8ee;
+}
+
+.studio-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 16px;
+}
+
+.right-column,
+.left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pane {
+  background: #181b21;
+  border: 1px solid #262a33;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.pane h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9aa1ad;
+  margin: 0 0 10px;
+}
+
+.json-editor {
+  display: flex;
+  flex-direction: column;
+}
+
+.json-textarea {
+  width: 100%;
+  min-height: 420px;
+  background: #0d0f13;
+  color: #d6e2ff;
+  border: 1px solid #2b2f3a;
+  border-radius: 6px;
+  padding: 10px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.json-textarea-invalid {
+  border-color: #e5484d;
+}
+
+.validation-errors {
+  margin-top: 8px;
+  color: #ff8a8a;
+  font-size: 12px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+}
+
+.validation-error-line {
+  padding: 2px 0;
+}
+
+.preview-mount {
+  background: #000;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+
+.hint {
+  color: #6f7684;
+  font-size: 12px;
+}
+
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.input-row label {
+  min-width: 90px;
+  font-size: 12px;
+  color: #b8bfcc;
+}
+
+.input-row input[type='range'] {
+  flex: 1;
+}
+
+.state-readout {
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 14px;
+  color: #7ee787;
+}
+
+.ai-mode {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.ai-mode-offline {
+  background: #2a2410;
+  color: #e3b341;
+}
+
+.ai-mode-connected {
+  background: #103a24;
+  color: #56d364;
+}
+
+.ai-prompt {
+  width: 100%;
+  min-height: 60px;
+  background: #0d0f13;
+  color: #d6e2ff;
+  border: 1px solid #2b2f3a;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.ai-prompt:disabled {
+  opacity: 0.5;
+}
+
+.palette-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.palette-form select,
+button {
+  background: #1e222b;
+  color: #e6e8ee;
+  border: 1px solid #2b2f3a;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.primitive-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #9aa1ad;
+}
+
+.primitive-list li {
+  padding: 4px 0;
+  border-top: 1px solid #23262e;
+}
+
+.apply-error {
+  margin-top: 8px;
+  color: #ff8a8a;
+  font-size: 12px;
+}
+
+.use-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.use-tab {
+  background: #1e222b;
+  color: #9aa1ad;
+  border: 1px solid #2b2f3a;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.use-tab-active {
+  color: #e6e8ee;
+  border-color: #4c7dff;
+  background: #1a2334;
+}
+
+.use-tabpanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.use-code {
+  background: #0d0f13;
+  color: #d6e2ff;
+  border: 1px solid #2b2f3a;
+  border-radius: 6px;
+  padding: 10px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+  margin: 0;
+}
+
+.use-code code {
+  color: #7ee7c7;
+}
+
+.use-panel .hint code {
+  color: #b8bfcc;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+}

@@ -1,0 +1,15 @@
+{
+  "schema": "glamour/v0",
+  "canvas": { "w": 300, "h": 200, "bg": "#12151b" },
+  "nodes": [
+    { "id": "btn", "type": "circle", "x": 150, "y": 100, "r": 40, "fill": "#4c7dff" }
+  ],
+  "machine": {
+    "initial": "idle",
+    "states": {
+      "idle": { "on": { "btn.hover": "hover" } },
+      "hover": { "set": { "btn.r": 60 }, "on": { "btn.leave": "idle" } }
+    },
+    "transition": { "ms": 150, "ease": "easeOut" }
+  }
+}

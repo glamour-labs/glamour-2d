@@ -1,0 +1,268 @@
+{
+  "schema": "glamour/v0",
+  "canvas": {
+    "w": 360,
+    "h": 440,
+    "bg": "#ffffff"
+  },
+  "nodes": [
+    {
+      "id": "midline",
+      "type": "rect",
+      "x": 40,
+      "y": 150,
+      "w": 280,
+      "h": 2,
+      "fill": "#e6e6e6",
+      "opacity": 1
+    },
+    {
+      "id": "baseline",
+      "type": "rect",
+      "x": 40,
+      "y": 380,
+      "w": 280,
+      "h": 2,
+      "fill": "#e6e6e6",
+      "opacity": 1
+    },
+    {
+      "id": "spark0",
+      "type": "rect",
+      "x": 180,
+      "y": 94.27,
+      "w": 18,
+      "h": 18,
+      "rotation": 45,
+      "fill": "#ffc800",
+      "opacity": 0
+    },
+    {
+      "id": "spark1",
+      "type": "rect",
+      "x": 309.9,
+      "y": 172.81,
+      "w": 13,
+      "h": 13,
+      "rotation": 45,
+      "fill": "#ffe08a",
+      "opacity": 0
+    },
+    {
+      "id": "spark2",
+      "type": "rect",
+      "x": 309.9,
+      "y": 319.27,
+      "w": 18,
+      "h": 18,
+      "rotation": 45,
+      "fill": "#ffc800",
+      "opacity": 0
+    },
+    {
+      "id": "spark3",
+      "type": "rect",
+      "x": 180,
+      "y": 397.81,
+      "w": 13,
+      "h": 13,
+      "rotation": 45,
+      "fill": "#ffe08a",
+      "opacity": 0
+    },
+    {
+      "id": "spark4",
+      "type": "rect",
+      "x": 50.1,
+      "y": 319.27,
+      "w": 18,
+      "h": 18,
+      "rotation": 45,
+      "fill": "#ffc800",
+      "opacity": 0
+    },
+    {
+      "id": "spark5",
+      "type": "rect",
+      "x": 50.1,
+      "y": 172.81,
+      "w": 13,
+      "h": 13,
+      "rotation": 45,
+      "fill": "#ffe08a",
+      "opacity": 0
+    },
+    {
+      "id": "ghostA",
+      "type": "text",
+      "x": 118,
+      "y": 138,
+      "text": "a",
+      "size": 210,
+      "fill": "#dcdedf",
+      "opacity": 1
+    },
+    {
+      "id": "blackA",
+      "type": "text",
+      "x": 118,
+      "y": 138,
+      "text": "a",
+      "size": 210,
+      "fill": "#1f2226",
+      "stroke": "#1f2226",
+      "strokeWidth": 2,
+      "opacity": 0
+    },
+    {
+      "id": "title",
+      "type": "text",
+      "x": 30,
+      "y": 34,
+      "text": "Trace the a — start here",
+      "size": 22,
+      "fill": "#4b4b4b",
+      "opacity": 1
+    },
+    {
+      "id": "arrowCircle",
+      "type": "circle",
+      "x": 250,
+      "y": 232,
+      "r": 24,
+      "fill": "#1cb0f6",
+      "opacity": 1
+    },
+    {
+      "id": "arrowShaft",
+      "type": "rect",
+      "x": 259.61,
+      "y": 239.79,
+      "w": 24,
+      "h": 6,
+      "rotation": 205,
+      "fill": "#ffffff",
+      "opacity": 1
+    },
+    {
+      "id": "arrowHead1",
+      "type": "rect",
+      "x": 238.45,
+      "y": 224.01,
+      "w": 13,
+      "h": 6,
+      "rotation": 347,
+      "fill": "#ffffff",
+      "opacity": 1
+    },
+    {
+      "id": "arrowHead2",
+      "type": "rect",
+      "x": 241.8,
+      "y": 225.57,
+      "w": 13,
+      "h": 6,
+      "rotation": 423,
+      "fill": "#ffffff",
+      "opacity": 1
+    },
+    {
+      "id": "tapzone",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "w": 360,
+      "h": 440,
+      "fill": "#000000",
+      "opacity": 0.02
+    }
+  ],
+  "machine": {
+    "initial": "start",
+    "transition": {
+      "ms": 350,
+      "ease": "easeInOut"
+    },
+    "states": {
+      "start": {
+        "set": {
+          "title.text": "Trace the a — start here",
+          "blackA.opacity": 0,
+          "arrowCircle.opacity": 1,
+          "arrowCircle.x": 250,
+          "arrowCircle.y": 232,
+          "arrowShaft.opacity": 1,
+          "arrowShaft.x": 259.61,
+          "arrowShaft.y": 239.79,
+          "arrowShaft.rotation": 205,
+          "arrowHead1.opacity": 1,
+          "arrowHead1.x": 238.45,
+          "arrowHead1.y": 224.01,
+          "arrowHead1.rotation": 347,
+          "arrowHead2.opacity": 1,
+          "arrowHead2.x": 241.8,
+          "arrowHead2.y": 225.57,
+          "arrowHead2.rotation": 423,
+          "spark0.opacity": 0,
+          "spark1.opacity": 0,
+          "spark2.opacity": 0,
+          "spark3.opacity": 0,
+          "spark4.opacity": 0,
+          "spark5.opacity": 0
+        },
+        "on": {
+          "tapzone.click": "stroke"
+        }
+      },
+      "stroke": {
+        "set": {
+          "title.text": "Down the stem",
+          "blackA.opacity": 1,
+          "arrowCircle.opacity": 1,
+          "arrowCircle.x": 258,
+          "arrowCircle.y": 340,
+          "arrowShaft.opacity": 1,
+          "arrowShaft.x": 261,
+          "arrowShaft.y": 328,
+          "arrowShaft.rotation": 90,
+          "arrowHead1.opacity": 1,
+          "arrowHead1.x": 255.64,
+          "arrowHead1.y": 353.85,
+          "arrowHead1.rotation": 232,
+          "arrowHead2.opacity": 1,
+          "arrowHead2.x": 255.64,
+          "arrowHead2.y": 350.15,
+          "arrowHead2.rotation": 308,
+          "spark0.opacity": 0,
+          "spark1.opacity": 0,
+          "spark2.opacity": 0,
+          "spark3.opacity": 0,
+          "spark4.opacity": 0,
+          "spark5.opacity": 0
+        },
+        "on": {
+          "tapzone.click": "done"
+        }
+      },
+      "done": {
+        "set": {
+          "title.text": "Nice!",
+          "blackA.opacity": 1,
+          "arrowCircle.opacity": 0,
+          "arrowShaft.opacity": 0,
+          "arrowHead1.opacity": 0,
+          "arrowHead2.opacity": 0,
+          "spark0.opacity": 1,
+          "spark1.opacity": 1,
+          "spark2.opacity": 1,
+          "spark3.opacity": 1,
+          "spark4.opacity": 1,
+          "spark5.opacity": 1
+        },
+        "on": {
+          "tapzone.click": "start"
+        }
+      }
+    }
+  }
+}

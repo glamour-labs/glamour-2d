@@ -1,0 +1,83 @@
+{
+  "schema": "glamour/v0",
+  "canvas": {
+    "w": 640,
+    "h": 400,
+    "bg": "#8fd3ff"
+  },
+  "nodes": [
+    { "id": "cloud1a", "type": "circle", "x": 110, "y": 90, "r": 26, "fill": "#ffffff", "opacity": 0.9 },
+    { "id": "cloud1b", "type": "circle", "x": 145, "y": 90, "r": 32, "fill": "#ffffff", "opacity": 0.9 },
+    { "id": "cloud1c", "type": "circle", "x": 180, "y": 92, "r": 24, "fill": "#ffffff", "opacity": 0.9 },
+    { "id": "cloud2a", "type": "circle", "x": 470, "y": 70, "r": 20, "fill": "#ffffff", "opacity": 0.85 },
+    { "id": "cloud2b", "type": "circle", "x": 500, "y": 70, "r": 26, "fill": "#ffffff", "opacity": 0.85 },
+
+    { "id": "pipe1_top", "type": "rect", "x": 300, "y": 0, "w": 70, "h": 150, "fill": "#5aab3f", "stroke": "#3c7a29", "strokeWidth": 3 },
+    { "id": "pipe1_top_cap", "type": "rect", "x": 293, "y": 132, "w": 84, "h": 20, "fill": "#6fc24d", "stroke": "#3c7a29", "strokeWidth": 3 },
+    { "id": "pipe1_bot", "type": "rect", "x": 300, "y": 258, "w": 70, "h": 102, "fill": "#5aab3f", "stroke": "#3c7a29", "strokeWidth": 3 },
+    { "id": "pipe1_bot_cap", "type": "rect", "x": 293, "y": 256, "w": 84, "h": 20, "fill": "#6fc24d", "stroke": "#3c7a29", "strokeWidth": 3 },
+
+    { "id": "pipe2_top", "type": "rect", "x": 500, "y": 0, "w": 70, "h": 110, "fill": "#5aab3f", "stroke": "#3c7a29", "strokeWidth": 3 },
+    { "id": "pipe2_top_cap", "type": "rect", "x": 493, "y": 92, "w": 84, "h": 20, "fill": "#6fc24d", "stroke": "#3c7a29", "strokeWidth": 3 },
+    { "id": "pipe2_bot", "type": "rect", "x": 500, "y": 300, "w": 70, "h": 60, "fill": "#5aab3f", "stroke": "#3c7a29", "strokeWidth": 3 },
+    { "id": "pipe2_bot_cap", "type": "rect", "x": 493, "y": 298, "w": 84, "h": 20, "fill": "#6fc24d", "stroke": "#3c7a29", "strokeWidth": 3 },
+
+    { "id": "ground", "type": "rect", "x": 0, "y": 360, "w": 640, "h": 40, "fill": "#ded895", "stroke": "#c9c072", "strokeWidth": 3 },
+    { "id": "grass", "type": "rect", "x": 0, "y": 356, "w": 640, "h": 8, "fill": "#7bc95a" },
+
+    { "id": "tapzone", "type": "rect", "x": 0, "y": 0, "w": 640, "h": 356, "fill": "#8fd3ff", "opacity": 0.02 },
+
+    { "id": "bird_wing", "type": "rect", "x": 150, "y": 244, "w": 26, "h": 16, "fill": "#f0a500", "stroke": "#c98700", "strokeWidth": 2, "rotation": 0 },
+    { "id": "bird_body", "type": "circle", "x": 180, "y": 240, "r": 26, "fill": "#ffd23f", "stroke": "#e0a900", "strokeWidth": 3 },
+    { "id": "bird_beak", "type": "rect", "x": 202, "y": 234, "w": 20, "h": 12, "fill": "#ff7a00", "stroke": "#cc5f00", "strokeWidth": 2 },
+    { "id": "bird_eye", "type": "circle", "x": 190, "y": 231, "r": 8, "fill": "#ffffff" },
+    { "id": "bird_pupil", "type": "circle", "x": 192, "y": 231, "r": 4, "fill": "#222222" },
+
+    { "id": "title", "type": "text", "x": 200, "y": 44, "text": "TAP THE BIRD TO FLAP", "size": 22, "fill": "#ffffff", "stroke": "#3a6ea5", "strokeWidth": 1 }
+  ],
+  "machine": {
+    "initial": "down",
+    "states": {
+      "down": {
+        "set": {
+          "bird_body.y": 240,
+          "bird_wing.y": 244,
+          "bird_wing.rotation": 0,
+          "bird_beak.y": 234,
+          "bird_eye.y": 231,
+          "bird_pupil.y": 231,
+          "title.text": "TAP THE BIRD TO FLAP"
+        },
+        "on": {
+          "bird_body.click": "up",
+          "bird_wing.click": "up",
+          "bird_beak.click": "up",
+          "bird_eye.click": "up",
+          "tapzone.click": "up"
+        }
+      },
+      "up": {
+        "set": {
+          "bird_body.y": 150,
+          "bird_wing.y": 154,
+          "bird_wing.rotation": -28,
+          "bird_beak.y": 144,
+          "bird_eye.y": 141,
+          "bird_pupil.y": 141,
+          "title.text": "FLAP! (tap again to drop)"
+        },
+        "on": {
+          "bird_body.click": "down",
+          "bird_wing.click": "down",
+          "bird_beak.click": "down",
+          "bird_eye.click": "down",
+          "tapzone.click": "down"
+        }
+      }
+    },
+    "transition": {
+      "ms": 220,
+      "ease": "easeOut"
+    }
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "schema": "glamour/v0",
+  "canvas": {
+    "w": 200,
+    "h": 120,
+    "bg": "#20232a"
+  },
+  "nodes": [
+    {
+      "id": "track",
+      "type": "rect",
+      "x": 20,
+      "y": 40,
+      "w": 100,
+      "h": 40,
+      "fill": "#888c94"
+    },
+    {
+      "id": "knob",
+      "type": "circle",
+      "x": 38,
+      "y": 60,
+      "r": 17,
+      "fill": "#ffffff"
+    },
+    {
+      "id": "label",
+      "type": "text",
+      "x": 40,
+      "y": 100,
+      "text": "OFF",
+      "size": 16,
+      "fill": "#888c94"
+    }
+  ],
+  "machine": {
+    "initial": "off",
+    "states": {
+      "off": {
+        "set": {
+          "track.fill": "#888c94",
+          "knob.x": 38,
+          "knob.fill": "#ffffff",
+          "label.text": "OFF",
+          "label.fill": "#888c94"
+        },
+        "on": {
+          "knob.click": "on",
+          "track.click": "on"
+        }
+      },
+      "on": {
+        "set": {
+          "track.fill": "#34c759",
+          "knob.x": 102,
+          "knob.fill": "#ffffff",
+          "label.text": "ON",
+          "label.fill": "#34c759"
+        },
+        "on": {
+          "knob.click": "off",
+          "track.click": "off"
+        }
+      }
+    },
+    "transition": {
+      "ms": 320,
+      "ease": "easeOut"
+    }
+  }
+}

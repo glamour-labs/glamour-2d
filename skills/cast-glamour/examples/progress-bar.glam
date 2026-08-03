@@ -1,0 +1,12 @@
+{
+  "schema": "glamour/v0",
+  "canvas": { "w": 300, "h": 120, "bg": "#12151b" },
+  "inputs": { "progress": 0.4 },
+  "nodes": [
+    { "id": "track", "type": "rect", "x": 40, "y": 55, "w": 220, "h": 10, "fill": "#2a2f3a" },
+    { "id": "bar", "type": "rect", "x": 40, "y": 55, "w": 20, "h": 10, "fill": "#5ad67d" }
+  ],
+  "bind": [
+    { "node": "bar", "prop": "w", "expr": "lerp(20, 220, progress)" }
+  ]
+}

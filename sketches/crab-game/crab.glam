@@ -1,0 +1,224 @@
+{
+  "schema": "glamour/v0.1",
+  "canvas": {
+    "w": 640,
+    "h": 360,
+    "bg": "#0a5c78"
+  },
+  "groups": [
+    {
+      "id": "crabA",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "id": "crabB",
+      "x": 0,
+      "y": 0
+    }
+  ],
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 220,
+      "y": 20,
+      "text": "Tap the crab",
+      "size": 22,
+      "fill": "#eafcff"
+    },
+    {
+      "id": "sand",
+      "type": "rect",
+      "x": 0,
+      "y": 300,
+      "w": 640,
+      "h": 60,
+      "fill": "#d9c07a"
+    },
+    {
+      "id": "crabA-clawL",
+      "type": "circle",
+      "x": 36,
+      "y": 244,
+      "r": 12,
+      "fill": "#c0392b",
+      "group": "crabA"
+    },
+    {
+      "id": "crabA-clawR",
+      "type": "circle",
+      "x": 104,
+      "y": 244,
+      "r": 12,
+      "fill": "#c0392b",
+      "group": "crabA"
+    },
+    {
+      "id": "crabA-body",
+      "type": "circle",
+      "x": 70,
+      "y": 250,
+      "r": 26,
+      "fill": "#e05a45",
+      "group": "crabA",
+      "emit": "crab-a"
+    },
+    {
+      "id": "crabA-eyeL",
+      "type": "circle",
+      "x": 61,
+      "y": 240,
+      "r": 4,
+      "fill": "#1a1a1a",
+      "group": "crabA"
+    },
+    {
+      "id": "crabA-eyeR",
+      "type": "circle",
+      "x": 79,
+      "y": 240,
+      "r": 4,
+      "fill": "#1a1a1a",
+      "group": "crabA"
+    },
+    {
+      "id": "crabB-clawL",
+      "type": "circle",
+      "x": 526,
+      "y": 254,
+      "r": 12,
+      "fill": "#d97a1e",
+      "group": "crabB"
+    },
+    {
+      "id": "crabB-clawR",
+      "type": "circle",
+      "x": 594,
+      "y": 254,
+      "r": 12,
+      "fill": "#d97a1e",
+      "group": "crabB"
+    },
+    {
+      "id": "crabB-body",
+      "type": "circle",
+      "x": 560,
+      "y": 260,
+      "r": 26,
+      "fill": "#f0932b",
+      "group": "crabB",
+      "emit": "crab-b"
+    },
+    {
+      "id": "crabB-eyeL",
+      "type": "circle",
+      "x": 551,
+      "y": 250,
+      "r": 4,
+      "fill": "#1a1a1a",
+      "group": "crabB"
+    },
+    {
+      "id": "crabB-eyeR",
+      "type": "circle",
+      "x": 569,
+      "y": 250,
+      "r": 4,
+      "fill": "#1a1a1a",
+      "group": "crabB"
+    }
+  ],
+  "loops": [
+    {
+      "node": "crabA-body",
+      "prop": "x",
+      "from": 70,
+      "to": 560,
+      "ms": 7840,
+      "mode": "alternate",
+      "ease": "easeInOut"
+    },
+    {
+      "node": "crabA-clawL",
+      "prop": "x",
+      "from": 36,
+      "to": 526,
+      "ms": 7840,
+      "mode": "alternate",
+      "ease": "easeInOut"
+    },
+    {
+      "node": "crabA-clawR",
+      "prop": "x",
+      "from": 104,
+      "to": 594,
+      "ms": 7840,
+      "mode": "alternate",
+      "ease": "easeInOut"
+    },
+    {
+      "node": "crabA-eyeL",
+      "prop": "x",
+      "from": 61,
+      "to": 551,
+      "ms": 7840,
+      "mode": "alternate",
+      "ease": "easeInOut"
+    },
+    {
+      "node": "crabA-eyeR",
+      "prop": "x",
+      "from": 79,
+      "to": 569,
+      "ms": 7840,
+      "mode": "alternate",
+      "ease": "easeInOut"
+    },
+    {
+      "node": "crabB-body",
+      "prop": "x",
+      "from": 560,
+      "to": 70,
+      "ms": 8400,
+      "mode": "alternate",
+      "ease": "easeInOut"
+    },
+    {
+      "node": "crabB-clawL",
+      "prop": "x",
+      "from": 526,
+      "to": 36,
+      "ms": 8400,
+      "mode": "alternate",
+      "ease": "easeInOut"
+    },
+    {
+      "node": "crabB-clawR",
+      "prop": "x",
+      "from": 594,
+      "to": 104,
+      "ms": 8400,
+      "mode": "alternate",
+      "ease": "easeInOut"
+    },
+    {
+      "node": "crabB-eyeL",
+      "prop": "x",
+      "from": 551,
+      "to": 61,
+      "ms": 8400,
+      "mode": "alternate",
+      "ease": "easeInOut"
+    },
+    {
+      "node": "crabB-eyeR",
+      "prop": "x",
+      "from": 569,
+      "to": 79,
+      "ms": 8400,
+      "mode": "alternate",
+      "ease": "easeInOut"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "schema": "glamour/v0",
+  "canvas": { "w": 300, "h": 200, "bg": "#12151b" },
+  "nodes": [
+    { "id": "orb", "type": "circle", "x": 150, "y": 100, "r": 48, "fill": "#4c7dff" }
+  ],
+  "machine": {
+    "initial": "idle",
+    "states": {
+      "idle": { "set": { "orb.r": 48, "orb.fill": "#4c7dff" }, "on": { "orb.click": "active" } },
+      "active": { "set": { "orb.r": 72, "orb.fill": "#ff9f43" }, "on": { "orb.click": "idle" } }
+    },
+    "transition": { "ms": 250, "ease": "easeOut" }
+  }
+}

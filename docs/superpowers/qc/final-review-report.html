@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Glamour v1 — Final Review</title>
+<style>
+  :root{
+    --bg:#0b0d12; --bg-panel:#12151c; --bg-card:#161a22; --border:#232833;
+    --ink:#e8eaf0; --ink-dim:#9aa3b2; --ink-faint:#5c6577;
+    --accent:#7c9cff; --accent-dim:#3d4a7a;
+    --green:#4fd18b; --green-dim:#1c3327;
+    --amber:#f2b544; --amber-dim:#3a2f16;
+    --red:#ff6b6b; --red-dim:#3a1e1e;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(124,156,255,0.08), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(79,209,139,0.05), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+    line-height:1.55;
+  }
+  .wrap{max-width:960px; margin:0 auto; padding:32px 20px 80px;}
+  header.top{margin-bottom:28px;}
+  .eyebrow{
+    font-size:12px; letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--ink-faint); font-weight:600; margin-bottom:8px;
+  }
+  h1{font-size:28px; margin:0 0 6px; letter-spacing:-0.01em;}
+  .sub{color:var(--ink-dim); font-size:14px;}
+
+  .verdict-banner{
+    margin-top:22px; border-radius:var(--radius); padding:22px 24px;
+    background:linear-gradient(160deg, rgba(242,181,68,0.12), rgba(22,26,34,0.4));
+    border:1px solid var(--amber-dim);
+    display:flex; gap:18px; align-items:center; flex-wrap:wrap;
+  }
+  .verdict-badge{
+    font-size:13px; font-weight:700; letter-spacing:0.04em;
+    padding:7px 14px; border-radius:999px; white-space:nowrap;
+    background:var(--amber-dim); color:var(--amber); border:1px solid rgba(242,181,68,0.35);
+  }
+  .verdict-text{font-size:15px; color:var(--ink); flex:1; min-width:240px;}
+  .verdict-text b{color:#fff;}
+  .go-chip{
+    font-size:12px; font-weight:700; padding:5px 10px; border-radius:8px;
+    background:var(--green-dim); color:var(--green); border:1px solid rgba(79,209,139,0.35);
+    margin-left:6px;
+  }
+
+  nav.toc{
+    display:flex; gap:8px; flex-wrap:wrap; margin:26px 0 6px;
+  }
+  nav.toc a{
+    font-size:12.5px; color:var(--ink-dim); text-decoration:none;
+    padding:6px 12px; border:1px solid var(--border); border-radius:999px;
+    background:var(--bg-panel);
+  }
+  nav.toc a:hover{color:var(--ink); border-color:var(--accent-dim);}
+
+  section{margin-top:44px;}
+  h2{
+    font-size:12px; letter-spacing:0.12em; text-transform:uppercase;
+    color:var(--ink-faint); font-weight:700; margin:0 0 16px;
+    display:flex; align-items:center; gap:10px;
+  }
+  h2::after{content:""; flex:1; height:1px; background:var(--border);}
+  h3{font-size:15px; color:var(--ink); margin:20px 0 8px;}
+
+  .panel{
+    background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius);
+    padding:20px 22px;
+  }
+
+  ul.check-list{list-style:none; margin:0; padding:0;}
+  ul.check-list li{
+    display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--border);
+    font-size:14px; align-items:flex-start;
+  }
+  ul.check-list li:last-child{border-bottom:none;}
+  .tag{
+    flex-shrink:0; width:22px; height:22px; border-radius:6px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:800; margin-top:1px;
+  }
+  .tag.done{background:var(--green-dim); color:var(--green);}
+  .tag.open{background:var(--amber-dim); color:var(--amber);}
+  .tag.defer{background:var(--bg-card); color:var(--ink-faint); border:1px solid var(--border);}
+  li .body{flex:1;}
+  li .body b{color:#fff;}
+  li code{
+    background:rgba(255,255,255,0.06); padding:1px 5px; border-radius:5px;
+    font-size:12.5px; color:#cfd6e6; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  li .ev{display:block; margin-top:3px; font-size:12.5px; color:var(--ink-faint);}
+
+  .concerns{
+    background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius);
+    padding:4px 0;
+  }
+  .concerns .item{
+    padding:16px 22px; border-bottom:1px solid var(--border); font-size:14px; color:var(--ink-dim);
+  }
+  .concerns .item:last-child{border-bottom:none;}
+  .concerns .item b{color:var(--ink);}
+
+  .audit-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:18px;
+  }
+  .stat{
+    background:var(--bg-card); border:1px solid var(--border); border-radius:12px;
+    padding:16px; text-align:center;
+  }
+  .stat .n{font-size:26px; font-weight:800; color:#fff;}
+  .stat .l{font-size:11.5px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.06em; margin-top:4px;}
+
+  .gallery{
+    display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:16px;
+  }
+  figure{margin:0; background:var(--bg-card); border:1px solid var(--border); border-radius:12px; overflow:hidden;}
+  figure img{display:block; width:100%; height:auto; background:#000;}
+  figcaption{padding:10px 14px; font-size:12px; color:var(--ink-dim);}
+
+  code.block{
+    display:block; white-space:pre-wrap; background:var(--bg-card); border:1px solid var(--border);
+    border-radius:10px; padding:14px 16px; font-size:12.5px; color:#cfd6e6; margin-top:10px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+
+  .note{
+    font-size:12.5px; color:var(--ink-faint); border-left:2px solid var(--accent-dim);
+    padding:8px 14px; margin-top:14px; background:rgba(124,156,255,0.04); border-radius:0 8px 8px 0;
+  }
+
+  footer{margin-top:60px; padding-top:20px; border-top:1px solid var(--border); font-size:12px; color:var(--ink-faint);}
+
+  @media (max-width:640px){
+    .audit-grid{grid-template-columns:repeat(3,1fr);}
+    .gallery{grid-template-columns:1fr;}
+    h1{font-size:22px;}
+    .verdict-banner{flex-direction:column; align-items:flex-start;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="eyebrow">Final Review · Certification</div>
+    <h1>Glamour v1</h1>
+    <div class="sub">AI-native format + runtime for interactive animated canvases — 6 surfaces, greenfield build, no remote yet.</div>
+  </header>
+
+  <div class="verdict-banner">
+    <div class="verdict-badge">⚠ GO WITH CONCERNS</div>
+    <div class="verdict-text">
+      Calibrated to a <b>v1 personal-tool bar</b> (greenfield, no remote, single user) this resolves to
+      <span class="go-chip">GO</span> — the critical export-XSS and validate-expr gaps are fixed and independently
+      re-read in source; every PASS in the evidence trail carries a concrete Evidence line; the one gap this
+      review found (a full fresh test-suite re-run) is well-corroborated, not a red flag.
+    </div>
+  </div>
+
+  <nav class="toc">
+    <a href="#done">Done</a>
+    <a href="#open">Open</a>
+    <a href="#concerns">Concerns</a>
+    <a href="#audit">Evidence audit</a>
+    <a href="#gallery">Screenshots</a>
+    <a href="#deferrals">v2 deferrals</a>
+  </nav>
+
+  <section id="done">
+    <h2>Done — verified against the Definition of Done</h2>
+    <div class="panel">
+      <ul class="check-list">
+        <li><span class="tag done">✓</span><div class="body">
+          <b>Spine spike (Konva + XState + node-canvas), 6/6 claims proven</b> before build started.
+          <span class="ev">docs/superpowers/spikes/spine-spike.mjs + spine-spike-proof.png</span>
+        </div></li>
+        <li><span class="tag done">✓</span><div class="body">
+          <b>@glam/core</b> — schema, validate, expr, ops, palette, scene, headless render. <code>validate</code> catches all
+          6 semantic error classes — confirmed by direct read of <code>validate.ts</code>, not just cited.
+          <span class="ev">runtime-qc-glamour-v1-nonui.md #Core public API — PASS, raw stdout</span>
+        </div></li>
+        <li><span class="tag done">✓</span><div class="body">
+          <b>@glam/player</b> — renderGlamour, &lt;glam-canvas&gt;, exportInlineHTML; UMD split into
+          <code>@glam/player</code> (browser) / <code>@glam/player/node</code> — resolves the Node/HTMLElement crash (finding #1).
+          <span class="ev">BUILD-NOTES.md — RESOLVED, verified in packages/player/src/export.ts</span>
+        </div></li>
+        <li><span class="tag done">✓</span><div class="body">
+          <b>@glam/mcp</b> — 11 tools, real stdio subprocess handshake (not in-memory shortcut), scripted session +
+          error path.
+          <span class="ev">runtime-qc-glamour-v1-nonui.md #MCP server — PASS, raw tool list + session output</span>
+        </div></li>
+        <li><span class="tag done">✓</span><div class="body">
+          <b>glam CLI</b> — new / validate / render / preview, including the negative case (broken bind → exit 1,
+          error names the bad node id).
+          <span class="ev">runtime-qc-glamour-v1-nonui.md #CLI self-verify loop — PASS</span>
+        </div></li>
+        <li><span class="tag done">✓</span><div class="body">
+          <b>cast-glamour skill</b> — 3 worked examples, each independently validated + rendered to real PNGs with
+          correct declared canvas dimensions.
+          <span class="ev">runtime-qc-glamour-v1-nonui.md #Skill examples — PASS</span>
+        </div></li>
+        <li><span class="tag done">✓</span><div class="body">
+          <b>Studio</b> — dark two-pane UI, live preview, validation-error surfacing + clear-on-fix, and the
+          input→binding wire proven with a <b>real user-gesture</b> interaction (a synthetic-event false start was
+          correctly flagged and discarded rather than papered over).
+          <span class="ev">studio-browser-qc.md #One interaction — PASS, evidence/06-slider-arrow-keys-0.8.png</span>
+        </div></li>
+        <li><span class="tag done">✓</span><div class="body">
+          <b>Round-table review ran and reported</b> — code review (1 critical, 2 important, 5 minor) and an
+          independent devil/techdebt pass, both with specific line-numbered findings, not vague rollups.
+        </div></li>
+        <li><span class="tag done">✓</span><div class="body">
+          <b>Critical export-XSS fixed</b> — read <code>packages/player/src/export.ts</code> directly:
+          <code>escapeForInlineScript</code> neutralizes <code>&lt;/script</code>, <code>&lt;!--</code>, U+2028/U+2029
+          in both the UMD slot and the doc-JSON slot, matching the devil's confirmed repro vector exactly.
+        </div></li>
+        <li><span class="tag done">✓</span><div class="body">
+          <b>validate-expr gap fixed</b> — read <code>packages/core/src/validate.ts</code> directly: every
+          <code>bind.expr</code> parsed via <code>evalExpr</code> against numeric-only inputs and checked
+          <code>Number.isFinite</code>; malformed <code>set</code> value types rejected against a
+          numeric/string prop split (also closes the NaN-tween finding in the same pass).
+        </div></li>
+        <li><span class="tag done">✓</span><div class="body">
+          <b><code>play()</code>/<code>pause()</code> stubs removed</b> from the public player contract — confirmed
+          by grep: zero occurrences left in <code>player.ts</code>.
+        </div></li>
+        <li><span class="tag done">✓</span><div class="body">
+          <b>Shared <code>classifyOnKey</code> extracted</b> — confirmed at <code>packages/core/src/onkey.ts</code>,
+          closing the validate↔machine ambiguous-key divergence the devil review flagged.
+        </div></li>
+        <li><span class="tag done">✓</span><div class="body">
+          <b>Node-20 ABI invariant is consistent everywhere</b> — <code>.nvmrc</code> pins <code>20.19.4</code>
+          (read directly); BUILD-NOTES, README, and every QC evidence file use the same
+          <code>export PATH=...v20.19.4...</code> prefix.
+        </div></li>
+        <li><span class="tag done">✓</span><div class="body">
+          <b>Test-file inventory independently matches the "23 files" claim</b> — globbed directly by this review
+          (not just cited): 20 files under <code>packages/*/test</code>, 1 under the skill, 2 under Studio = 23, exact.
+        </div></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="open">
+    <h2>Open — not done / deferred / NOT-RUN</h2>
+    <div class="panel">
+      <ul class="check-list">
+        <li><span class="tag open">!</span><div class="body">
+          <b>"125 tests green" full-suite re-execution — NOT-RUN by this review.</b> This certification session
+          has no Bash tool available, so <code>npx vitest run</code> could not be executed fresh here. Downgraded
+          per audit rule (a claim needs its own Evidence line from THIS pass). Mitigated by: exact test-file-count
+          match (23/23, independently globbed above), internally-consistent per-group counts in BUILD-NOTES
+          (49+11+7+6+7+4=84 pre-fix, matching the separately reported "84/84 green"), and a real
+          <code>npm run build</code> (tsc --noEmit + vite build) succeeding per runtime-qc. Plausible and
+          well-corroborated — but not a fresh first-party PASS from this certification.
+        </div></li>
+        <li><span class="tag open">!</span><div class="body">
+          <b>README quickstart is stale</b> — <code>README.md:64</code> still says "84 tests across all surfaces";
+          actual post-fix count is 125. Cosmetic doc drift, not a functional gap, but should be bumped before anyone
+          reads it next.
+        </div></li>
+        <li><span class="tag defer">D</span><div class="body">
+          <b>MCP↔core schema duplication</b> — <code>packages/mcp/src/server.ts</code> still hand-restates zod
+          shapes (confirmed present, not fixed). Documented low-risk DEFER; both sides independently tested.
+        </div></li>
+        <li><span class="tag defer">D</span><div class="body">
+          <b><code>SceneHandle</code>'s <code>KonvaLike = any</code></b> — confirmed still present in
+          <code>packages/core/src/scene.ts</code>. Documented tradeoff (Node vs browser Konva types differ);
+          tighten to a structural interface post-v1.
+        </div></li>
+        <li><span class="tag defer">D</span><div class="body">
+          <b>Degenerate-geometry validate-warning</b> (circle without <code>r</code>) — not implemented, explicitly
+          low-value-for-v1 per the fix list.
+        </div></li>
+        <li><span class="tag open">!</span><div class="body">
+          <b>Studio "Apply primitive" palette flow and thorough-depth QC</b> (full state matrix, responsive widths)
+          — out of scope for the quick-depth pass that ran. Not a v1 blocker, but not exercised either.
+        </div></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="concerns">
+    <h2>Concerns — what to eyeball</h2>
+    <div class="concerns">
+      <div class="item">
+        <b>The 125/125 figure is the one thing this pass couldn't confirm firsthand.</b> Everything else
+        (file inventory, individual fix diffs, individual runtime/browser QC) checks out on direct source read.
+        Low-risk gap, not a red flag — a 10-second <code>export PATH=...v20.19.4/bin:$PATH && npx vitest run</code>
+        at repo root closes it completely.
+      </div>
+      <div class="item">
+        <b>The critical fix and the validate-expr gap are the two findings that actually mattered</b> for a
+        personal tool that produces shareable HTML output — both read correctly in source, matching the exact
+        vectors devil/code-review confirmed. This is the load-bearing part of the ship decision and it holds up
+        under a fresh read.
+      </div>
+      <div class="item">
+        <b>Studio QC is quick-depth only.</b> The one interaction tested (slider → binding) is genuinely convincing
+        — a real keyboard gesture, not synthetic-event theater; the QC report itself correctly discarded a
+        false-negative synthetic attempt rather than paper over it. No responsive/thorough pass exists yet — acceptable
+        for a single-user personal tool, but worth knowing before scaling to any other user.
+      </div>
+      <div class="item">
+        <b>README doc drift (84 vs 125) is trivial to fix</b> and should be, but does not block a personal-tool ship.
+      </div>
+    </div>
+  </section>
+
+  <section id="audit">
+    <h2>Evidence audit</h2>
+    <div class="panel">
+      <div class="audit-grid">
+        <div class="stat"><div class="n">~39</div><div class="l">Claims audited</div></div>
+        <div class="stat"><div class="n">37</div><div class="l">Backed by proof</div></div>
+        <div class="stat"><div class="n">1</div><div class="l">Downgraded → NOT-RUN</div></div>
+      </div>
+      <div class="note">
+        Downgraded: full-suite "125 green" re-execution — claimed PASS in BUILD-NOTES.md, no fresh Evidence line
+        producible by this certification session (no Bash tool available). No findings were fabricated-pass or
+        evidence-free — every PASS in <code>runtime-qc-glamour-v1-nonui.md</code> and <code>studio-browser-qc.md</code>
+        carries a concrete Evidence line (raw output, screenshot path, or byte-level file check), and this review
+        independently re-read the actual source for every claimed fix rather than trusting fix-list prose alone.
+      </div>
+    </div>
+  </section>
+
+  <section id="gallery">
+    <h2>Screenshots — corroborating evidence viewed by this review</h2>
+    <div class="gallery">
+      <figure>
+        <img src="../spikes/spine-spike-proof.png" alt="Spine spike proof" />
+        <figcaption>Pre-build spike proof — Konva + XState + node-canvas, 6/6 claims verified headless, before any production code was written.</figcaption>
+      </figure>
+      <figure>
+        <img src="evidence/01-initial-render.png" alt="Studio initial render" />
+        <figcaption>Studio initial render — dark two-pane UI, starter doc's orb + bar rendering live in the preview pane.</figcaption>
+      </figure>
+      <figure>
+        <img src="evidence/02-invalid-json-error.png" alt="Studio validation error state" />
+        <figcaption>Malformed JSON in the editor surfaces an inline error immediately.</figcaption>
+      </figure>
+      <figure>
+        <img src="evidence/06-slider-arrow-keys-0.8.png" alt="Slider bound to bar width, real keyboard interaction" />
+        <figcaption>Real keyboard-gesture interaction (not synthetic events) — progress slider at 0.8 drives the bound bar width to ~176px, matching lerp(20,220,0.8)=176.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="deferrals">
+    <h2>Honest v2 deferrals — surfaced, not oversold</h2>
+    <div class="panel">
+      <ul class="check-list">
+        <li><span class="tag defer">v2</span><div class="body">Raster / sprite content + SVG import</div></li>
+        <li><span class="tag defer">v2</span><div class="body">Image → animation (depends on raster)</div></li>
+        <li><span class="tag defer">v2</span><div class="body">In-app AI chat (beyond prompt → primitive)</div></li>
+        <li><span class="tag defer">v2</span><div class="body">WebGL / Pixi performance path</div></li>
+        <li><span class="tag defer">v2</span><div class="body">Continuous-timeline playback — v1 is tween-on-transition only; the dead <code>play()</code>/<code>pause()</code> stubs were correctly removed rather than left misleading.</div></li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    Rendered from <code>docs/superpowers/final-review.md</code>. Evidence root: <code>docs/superpowers/qc/</code>.
+    Images referenced via relative paths within the repo tree (not base64-inlined — this certification session had
+    no Bash/Python tool available to perform the encoding step); the file opens correctly from this location with no
+    server, but is not a fully portable single-file artifact. See the final-review response for this caveat in full.
+  </footer>
+
+</div>
+</body>
+</html>

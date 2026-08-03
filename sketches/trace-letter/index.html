@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Glamour — Trace the Letter (Rung 2)</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        text-align: center;
+        color: #3a3f45;
+        background: #f4f6f9;
+        margin: 0;
+        padding: 28px 16px;
+      }
+      .card {
+        display: inline-block;
+        background: #fff;
+        border-radius: 22px;
+        padding: 8px 8px 18px;
+        box-shadow: 0 12px 40px rgba(20, 30, 50, 0.12);
+      }
+      #stage {
+        border-radius: 16px;
+        overflow: hidden;
+        touch-action: none; /* let drags draw, not scroll */
+        cursor: crosshair;
+      }
+      #verdict { font-size: 22px; font-weight: 700; min-height: 30px; margin: 14px 0 2px; color: #9aa4b0; }
+      #detail { color: #aab3bf; font-size: 12px; min-height: 16px; }
+      button {
+        margin-top: 12px; font-size: 15px; font-weight: 600;
+        padding: 9px 26px; border-radius: 999px; border: none;
+        background: #1cb0f6; color: #fff; cursor: pointer;
+      }
+      button:hover { background: #0e9ae0; }
+      .note { max-width: 380px; margin: 20px auto 0; font-size: 12px; color: #97a1ad; line-height: 1.5; }
+      code { background: #eef1f5; padding: 1px 5px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div id="stage"></div>
+      <div id="verdict">Drag from the green dot ↗</div>
+      <div id="detail"></div>
+      <button id="clear" type="button">Clear</button>
+    </div>
+
+    <p class="note">
+      Rung 2 proof: the canvas owns the live ink (drawing into a <code>stroke</code> node on drag);
+      the host below judges pass/fail from the <code>traceMatch</code> score in <code>onStroke</code>, and
+      pops the sparkles by driving each one's opacity through <code>player.set</code>. Scoring lives in
+      the host, not the glamour.
+    </p>
+
+    <script src="../../packages/player/dist/glam-player.umd.js"></script>
+    <script>
+      const PASS = 0.6;
+      const SPARKS = ['spark0', 'spark1', 'spark2', 'spark3', 'spark4', 'spark5'];
+      const ARROW = ['arrowCircle', 'arrowShaft', 'arrowHead1', 'arrowHead2'];
+      const verdict = document.getElementById('verdict');
+      const detail = document.getElementById('detail');
+
+      fetch('./letter-a.glam')
+        .then((r) => r.json())
+        .then((doc) => {
+          const player = Glam.renderGlamour(doc, document.getElementById('stage'));
+
+          function celebrate() {
+            // one-shot sparkle: host drives each diamond's opacity on, then off
+            SPARKS.forEach((id) => player.set(id, 'opacity', 1));
+            ARROW.forEach((id) => player.set(id, 'opacity', 0)); // arrow's job is done
+            setTimeout(() => SPARKS.forEach((id) => player.set(id, 'opacity', 0)), 850);
+          }
+
+          player.onStroke((e) => {
+            if (!e.match) return;
+            const pct = Math.round(e.match.score * 100);
+            if (e.match.score >= PASS && e.match.startOk) {
+              verdict.textContent = 'Nice! ⭐';
+              verdict.style.color = '#2e9e4f';
+              celebrate();
+            } else if (!e.match.startOk) {
+              verdict.textContent = 'Start at the green dot 👆';
+              verdict.style.color = '#e0902f';
+            } else {
+              verdict.textContent = 'Try again ✍️';
+              verdict.style.color = '#e0553f';
+            }
+            detail.textContent =
+              'score ' + pct + '%  ·  coverage ' + Math.round(e.match.coverage * 100) +
+              '%  ·  stray ' + Math.round(e.match.stray * 100) + '%';
+          });
+
+          document.getElementById('clear').addEventListener('click', () => location.reload());
+        });
+    </script>
+  </body>
+</html>

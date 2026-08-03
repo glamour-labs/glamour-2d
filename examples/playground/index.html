@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Glamour Playground — every animation, one page</title>
+    <style>
+      :root {
+        --bg: #0f1420;
+        --panel: #171d2b;
+        --panel-2: #1f2738;
+        --line: #2b3446;
+        --ink: #e7ecf5;
+        --muted: #93a0b6;
+        --accent: #4c7dff;
+        --accent-2: #5ad67d;
+        --chip: #263149;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        height: 100vh;
+        display: grid;
+        grid-template-columns: 300px 1fr;
+      }
+      /* Sidebar */
+      aside {
+        background: var(--panel);
+        border-right: 1px solid var(--line);
+        overflow-y: auto;
+        padding: 18px 14px;
+      }
+      .brand { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; margin: 0 0 2px; }
+      .brand span { color: var(--accent); }
+      .tagline { color: var(--muted); font-size: 12px; margin: 0 0 18px; }
+      .group-label {
+        font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+        color: var(--muted); margin: 16px 6px 8px;
+      }
+      button.item {
+        display: block; width: 100%; text-align: left;
+        background: transparent; border: 1px solid transparent; border-radius: 10px;
+        color: var(--ink); padding: 10px 12px; margin-bottom: 4px; cursor: pointer;
+        transition: background 0.12s, border-color 0.12s;
+      }
+      button.item:hover { background: var(--panel-2); }
+      button.item.active { background: var(--panel-2); border-color: var(--accent); }
+      .item .t { font-weight: 600; font-size: 14px; }
+      .item .b { color: var(--muted); font-size: 12px; margin-top: 2px; line-height: 1.35; }
+      .chips { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+      .chip {
+        font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 999px;
+        background: var(--chip); color: #b9c6e0;
+      }
+      .chip.new { background: #1e3a2a; color: var(--accent-2); }
+      /* Main */
+      main { display: flex; flex-direction: column; overflow: hidden; }
+      header {
+        padding: 16px 22px; border-bottom: 1px solid var(--line);
+        display: flex; align-items: baseline; gap: 14px;
+      }
+      header h2 { margin: 0; font-size: 18px; }
+      header .hint {
+        color: var(--accent-2); font-size: 13px; background: #16241c;
+        padding: 4px 10px; border-radius: 8px;
+      }
+      .body { flex: 1; display: grid; grid-template-columns: 1fr 300px; overflow: hidden; }
+      .stage-wrap {
+        display: flex; align-items: center; justify-content: center;
+        padding: 24px; overflow: auto;
+        background:
+          radial-gradient(circle at 20% 20%, #16203a 0, transparent 55%),
+          radial-gradient(circle at 80% 80%, #1a1530 0, transparent 55%);
+      }
+      #stage {
+        border-radius: 14px; overflow: hidden;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+        background: #fff;
+      }
+      /* Right rail */
+      .rail { border-left: 1px solid var(--line); background: var(--panel); overflow-y: auto; padding: 16px; }
+      .rail h3 {
+        font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+        color: var(--muted); margin: 0 0 10px;
+      }
+      .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+      .controls button {
+        background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+        border-radius: 8px; padding: 7px 14px; font-size: 13px; cursor: pointer;
+      }
+      .controls button:hover { border-color: var(--accent); }
+      .state-chip {
+        display: inline-block; font-size: 12px; background: var(--chip);
+        border-radius: 8px; padding: 4px 10px; margin-bottom: 14px; color: #b9c6e0;
+      }
+      .state-chip b { color: var(--accent); }
+      .slider-row { margin-bottom: 12px; }
+      .slider-row label { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+      .slider-row input { width: 100%; }
+      .log {
+        font-family: ui-monospace, monospace; font-size: 11px; line-height: 1.6;
+        background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+        padding: 10px; height: 180px; overflow-y: auto; color: #9fb0cc;
+      }
+      .log .hit { color: var(--accent-2); }
+      .log .evt { color: #ffd76b; }
+      .src {
+        margin-top: 16px; font-family: ui-monospace, monospace; font-size: 11px;
+        background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+        padding: 10px; max-height: 220px; overflow: auto; color: #8fa0bd; white-space: pre;
+      }
+      details summary { cursor: pointer; color: var(--muted); font-size: 12px; margin-top: 14px; }
+      .empty { color: var(--muted); font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <aside>
+      <p class="brand">✨ Glamour <span>Playground</span></p>
+      <p class="tagline">Every sketch + example, live. Click one to load it.</p>
+      <div id="nav"></div>
+    </aside>
+
+    <main>
+      <header>
+        <h2 id="title">Pick a glamour →</h2>
+        <span class="hint" id="hint"></span>
+      </header>
+      <div class="body">
+        <div class="stage-wrap"><div id="stage"><div class="empty" style="padding:60px">Nothing loaded yet.</div></div></div>
+        <div class="rail">
+          <div id="state"></div>
+          <h3>Controls</h3>
+          <div class="controls" id="controls"></div>
+          <div id="inputs"></div>
+          <h3>Event log</h3>
+          <div class="log" id="log"></div>
+          <details>
+            <summary>View .glam source</summary>
+            <div class="src" id="src"></div>
+          </details>
+        </div>
+      </div>
+    </main>
+
+    <script src="/packages/player/dist/glam-player.umd.js"></script>
+    <script>
+      // Curated manifest — served from the repo root, so paths are absolute.
+      const GLAMOURS = [
+        {
+          group: 'Rung 2 — input + ink (new)',
+          items: [
+            { title: 'Draw h — EASY', path: '/sketches/draw-letter/letter-h-easy.glam',
+              blurb: 'Duolingo draw-letter, EASY: a blue circle + white arrow walks the dashed path to show you the way. One stroke. Sparkles + Reset on completion.', tags: ['Rung 2', 'draw', 'easy'], new: true,
+              hint: 'Follow the moving arrow: down the stem, back up, over the arch, down to the foot.' },
+            { title: 'Draw h — HARD', path: '/sketches/draw-letter/letter-h-hard.glam',
+              blurb: 'Duolingo draw-letter, HARD: dashed path + a plain start dot (no moving arrow). One stroke. Sparkles + Reset on completion.', tags: ['Rung 2', 'draw', 'hard'], new: true,
+              hint: 'From the blue dot, trace the dashed path: down the stem, over the arch, down to the foot.' },
+            { title: 'Draw y — EASY', path: '/sketches/draw-letter/letter-y-easy.glam',
+              blurb: 'Duolingo draw-letter, EASY: two straight strokes. The arrow-cursor walks stroke 1; only after it’s drawn does stroke 2’s guide appear (per-stroke reveal). Reset when done.', tags: ['Rung 2', 'draw', 'easy', '2-stroke'], new: true,
+              hint: 'Stroke 1: follow the arrow down the left arm. Then stroke 2 appears: down the long right arm into the tail.' },
+            { title: 'Draw y — HARD', path: '/sketches/draw-letter/letter-y-hard.glam',
+              blurb: 'Duolingo draw-letter, HARD: two straight strokes, plain start dots (no moving arrow). Stroke 2’s guide only appears once stroke 1 is drawn. Reset when done.', tags: ['Rung 2', 'draw', 'hard', '2-stroke'], new: true,
+              hint: 'Stroke 1: from the left dot, trace the left arm. Then stroke 2 appears: the long right arm into the tail.' },
+            { title: 'Guided check (native, any shape)', path: '/examples/guided/check.glam',
+              blurb: 'The general `guided` block: grab the handle, drag it along the path, the player trims the ink to how far you pulled. Not letter-specific — works for any shape.', tags: ['guided', 'ink', 'draw'], new: true,
+              hint: 'Grab the blue handle and drag along the gray check — the ink follows the tip and stops wherever you release.' },
+            { title: 'Trace the letter a', path: '/sketches/trace-letter/letter-a.glam',
+              blurb: 'Duolingo-style card (the real ghost “a”): follow the arrow, drag-to-trace, live scoring + sparkle.', tags: ['Rung 2', 'ink'], new: true,
+              hint: 'Press the green dot by the arrow, trace around the bowl and down the stem.' },
+          ],
+        },
+        {
+          group: 'v1.1 / v0.1 — living canvas',
+          items: [
+            { title: 'Crab Letter Hunt (game canvas)', path: '/examples/react-crab/src/crab.json',
+              blurb: '3 rows of lettered crabs, mixed directions. The full scored game is the React app; here you see the canvas + emits.', tags: ['v0.1', 'loops', 'game'], new: true,
+              hint: 'Tap a crab — the log shows its id. Scoring/sparkle/win-lose live in the React host app.' },
+            { title: 'Beach crab (AI-authored)', path: '/examples/ai-authored/crab.glam',
+              blurb: 'Authored from a plain description; bobs + emits on tap.', tags: ['v0.1', 'loops', 'emit'], new: true,
+              hint: 'Tap the crab — watch the event log fire “crab-tapped”.' },
+            { title: 'Wandering orb', path: '/sketches/orb/orb.glam',
+              blurb: 'An orb face drifting while idle.', tags: ['v0.1', 'wander', 'groups'],
+              hint: 'Just watch — it drifts on its own (idle life).' },
+            { title: 'Two-crab word game', path: '/sketches/crab-game/crab.glam',
+              blurb: 'Two crabs pacing; each emits on click.', tags: ['v0.1', 'loops', 'emit'],
+              hint: 'Click a crab — the log shows which one.' },
+          ],
+        },
+        {
+          group: 'v1 — core interaction',
+          items: [
+            { title: 'iOS toggle switch', path: '/sketches/toggle-switch/toggle.glam',
+              blurb: 'State machine; knob slides + recolors.', tags: ['v1', 'machine'],
+              hint: 'Click the toggle to flip it.' },
+            { title: 'Progress ring', path: '/sketches/progress-ring/ring.glam',
+              blurb: '12 dots bound to a single input.', tags: ['v1', 'bind'],
+              hint: 'Drag the “progress” slider on the right.' },
+            { title: 'Flappy (tap scene)', path: '/sketches/flappy/flappy.glam',
+              blurb: 'Bird hops on click (not a full game).', tags: ['v1', 'machine'],
+              hint: 'Click to make the bird hop.' },
+            { title: 'Letter-A trace card', path: '/sketches/draw-letter-a/letter-a.glam',
+              blurb: 'Instructional tap-through (pre-Rung-2).', tags: ['v1', 'machine'],
+              hint: 'Click to advance the lesson steps.' },
+            { title: 'Embed demo', path: '/examples/embed-in-a-webpage/demo.glam',
+              blurb: 'The minimal embed sample.', tags: ['v1', 'bind', 'machine'],
+              hint: 'Drag the slider / click the shapes.' },
+          ],
+        },
+      ];
+
+      let player = null;
+      const $ = (id) => document.getElementById(id);
+      let statePoll = null;
+
+      function logLine(html, cls) {
+        const el = $('log');
+        const line = document.createElement('div');
+        if (cls) line.className = cls;
+        line.innerHTML = html;
+        el.appendChild(line);
+        el.scrollTop = el.scrollHeight;
+      }
+
+      function buildNav() {
+        const nav = $('nav');
+        GLAMOURS.forEach((section) => {
+          const label = document.createElement('div');
+          label.className = 'group-label';
+          label.textContent = section.group;
+          nav.appendChild(label);
+          section.items.forEach((g) => {
+            const btn = document.createElement('button');
+            btn.className = 'item';
+            btn.dataset.path = g.path;
+            btn.innerHTML =
+              `<div class="t">${g.title}</div><div class="b">${g.blurb}</div>` +
+              `<div class="chips">${g.tags.map((t) => `<span class="chip ${g.new ? 'new' : ''}">${t}</span>`).join('')}</div>`;
+            btn.addEventListener('click', () => select(g, btn));
+            nav.appendChild(btn);
+          });
+        });
+      }
+
+      async function select(g, btn) {
+        document.querySelectorAll('button.item').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        $('title').textContent = g.title;
+        $('hint').textContent = g.hint || '';
+        $('log').innerHTML = '';
+        $('inputs').innerHTML = '';
+        $('controls').innerHTML = '';
+        $('state').innerHTML = '';
+        if (statePoll) { clearInterval(statePoll); statePoll = null; }
+        if (player) { player.destroy(); player = null; }
+
+        let doc;
+        try {
+          doc = await (await fetch(g.path)).json();
+        } catch (e) {
+          $('stage').innerHTML = `<div class="empty" style="padding:60px">Failed to load ${g.path}</div>`;
+          return;
+        }
+        $('stage').innerHTML = '';
+        $('src').textContent = JSON.stringify(doc, null, 2);
+        player = Glam.renderGlamour(doc, $('stage'));
+
+        // Emits (clicks on nodes with `emit`)
+        player.on((e) => logLine(`<span class="hit">emit</span> ${e.event} <span style="color:#5a6a86">(from ${e.node})</span>`));
+
+        // Guide/completion shared bits. Guide elements use the `g<n>_...` id
+        // convention (n = pen-stroke, 1-based); gray track + rules are not guides.
+        // Two draw mechanics: HARD = free-draw scored by traceMatch (doc has `ink`);
+        // EASY = guided drag — grab the handle and pull it along the exact path,
+        // which reveals the ink perfectly (doc has `f<n>_*` fill segments, no `ink`).
+        const PASS = 0.6;
+        const nodeIds = (doc.nodes || []).map((n) => n.id);
+        const nodeById = (id) => doc.nodes.find((n) => n.id === id);
+        const sparkIds = nodeIds.filter((id) => /^spark/i.test(id));
+        const guideIds = nodeIds.filter((id) => /^g\d+_/i.test(id));
+        const groupIds = (n) => nodeIds.filter((id) => new RegExp(`^g${n}_`, 'i').test(id));
+
+        const resetBtn = document.createElement('button');
+        resetBtn.textContent = '↺ Reset';
+        resetBtn.style.display = 'none';
+        resetBtn.onclick = () => select(g, btn);
+
+        function finishLetter(passed) {
+          resetBtn.style.display = '';
+          if (!passed) return;
+          guideIds.forEach((id) => player.set(id, 'opacity', 0));
+          sparkIds.forEach((id) => player.set(id, 'opacity', 1));
+          setTimeout(() => sparkIds.forEach((id) => player.set(id, 'opacity', 0)), 1200);
+        }
+
+        if (doc.ink) {
+          // ---- HARD: free-draw + trace scoring ----
+          player.onPointer((e) => { if (e.type !== 'move') logLine(`pointer ${e.type} (${Math.round(e.x)},${Math.round(e.y)})`); });
+          let seqPass = true;
+          player.onStroke((e) => {
+            if (e.match) {
+              const label = e.index != null ? `stroke #${e.index + 1}` : 'stroke';
+              logLine(`<span class="evt">${label}</span> score ${Math.round(e.match.score * 100)}% · coverage ${Math.round(e.match.coverage * 100)}% · stray ${Math.round(e.match.stray * 100)}%`);
+            } else {
+              logLine(`<span class="evt">stroke</span> ${e.points.length / 2} points`);
+            }
+            const pass = !e.match || (e.match.score >= PASS && e.match.startOk);
+            if (e.index != null) {
+              if (e.index === 0) seqPass = true;
+              seqPass = seqPass && pass;
+              if (!e.done) {
+                groupIds(e.index + 1).forEach((id) => player.set(id, 'opacity', 0));
+                groupIds(e.index + 2).forEach((id) => player.set(id, 'opacity', 1));
+              } else finishLetter(seqPass);
+            } else finishLetter(pass);
+          });
+        } else if (doc.guided) {
+          // ---- EASY: native `guided`. The PLAYER owns the drag mechanics (grab,
+          // snap, trim, arrow, forgiving release, per-stroke advance); the host does
+          // only presentation, keyed on onGuided: reveal the next stroke's guide,
+          // then celebrate + Reset on the final stroke. ----
+          const strokeCount = doc.guided.strokes.length;
+          player.onGuided((e) => {
+            if (!e.done) return;
+            logLine(`<span class="evt">stroke #${e.index + 1}</span> done`);
+            if (e.index + 1 < strokeCount) {
+              groupIds(e.index + 1).forEach((id) => player.set(id, 'opacity', 0)); // hide the finished stroke's guide
+              groupIds(e.index + 2).forEach((id) => player.set(id, 'opacity', 1)); // reveal the next stroke's guide
+            } else {
+              finishLetter(true); // guide vanishes + sparkles + Reset
+            }
+          });
+        } else {
+          player.onPointer((e) => { if (e.type !== 'move') logLine(`pointer ${e.type} (${Math.round(e.x)},${Math.round(e.y)})`); });
+        }
+
+        // Play / pause for docs with continuous motion
+        const hasMotion = (doc.loops && doc.loops.length) || (doc.wander && doc.wander.length);
+        if (hasMotion) {
+          const mk = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.onclick = fn; return b; };
+          $('controls').appendChild(mk('⏸ Pause', () => player.pause()));
+          $('controls').appendChild(mk('▶ Play', () => player.play()));
+        }
+        const reload = document.createElement('button');
+        reload.textContent = '↻ Reload';
+        reload.onclick = () => select(g, btn);
+        $('controls').appendChild(reload);
+        $('controls').appendChild(resetBtn);
+        if (!hasMotion && !doc.inputs) {
+          $('controls').insertAdjacentHTML('afterbegin', '<span class="empty">(static / interaction-driven)</span> ');
+        }
+
+        // Input sliders (numeric inputs only)
+        if (doc.inputs) {
+          Object.entries(doc.inputs).forEach(([name, val]) => {
+            if (typeof val !== 'number') return;
+            const row = document.createElement('div');
+            row.className = 'slider-row';
+            const out = document.createElement('span');
+            out.textContent = val.toFixed(2);
+            const lbl = document.createElement('label');
+            lbl.append(name, out);
+            const input = document.createElement('input');
+            input.type = 'range'; input.min = '0'; input.max = '1'; input.step = '0.01'; input.value = String(val);
+            input.oninput = () => { const v = parseFloat(input.value); out.textContent = v.toFixed(2); player.setInput(name, v); };
+            row.append(lbl, input);
+            $('inputs').appendChild(row);
+          });
+        }
+
+        // Machine state chip (polled — the player has no state-change callback)
+        if (doc.machine) {
+          const chip = document.createElement('div');
+          chip.className = 'state-chip';
+          $('state').appendChild(chip);
+          const upd = () => { chip.innerHTML = `state: <b>${player.getState()}</b>`; };
+          upd();
+          statePoll = setInterval(upd, 150);
+        }
+      }
+
+      buildNav();
+      // Auto-open the trace sketch first (the newest, most fun to poke).
+      const first = document.querySelector('button.item');
+      if (first) first.click();
+    </script>
+  </body>
+</html>

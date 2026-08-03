@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Acme Corp — totally unrelated website</title>
+<style>body{font-family:system-ui;background:#0b0d11;color:#ddd;padding:40px;max-width:640px;margin:auto}
+h1{font-weight:700}#stage,glam-canvas{display:block;margin:18px 0;border:1px solid #333;border-radius:10px;overflow:hidden;width:520px;max-width:100%}
+button{background:#222;color:#ddd;border:1px solid #444;border-radius:6px;padding:6px 12px;cursor:pointer}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}</style>
+</head>
+<body>
+  <h1>Acme Corp</h1>
+  <p><b>Path A — zero-JS drop-in.</b> The player auto-registers <code>&lt;glam-canvas&gt;</code>; pointer interaction just works:</p>
+  <script src="./glam-player.umd.js"></script>
+  <glam-canvas src="./demo.glam"></glam-canvas>
+
+  <p><b>Path B — control it from your own code.</b> <code>renderGlamour()</code> returns a player you can drive:</p>
+  <div id="stage"></div>
+  <div class="row">
+    <button id="p0">progress 0%</button>
+    <button id="p100">progress 100%</button>
+    <input id="sl" type="range" min="0" max="1" step="0.01" value="0.35">
+    <span id="st">state: —</span>
+  </div>
+  <script>
+    fetch('./demo.glam').then(r=>r.json()).then(doc=>{
+      const player = Glam.renderGlamour(doc, document.getElementById('stage'));
+      document.getElementById('p0').onclick   = () => player.setInput('progress', 0);
+      document.getElementById('p100').onclick = () => player.setInput('progress', 1);
+      document.getElementById('sl').oninput   = e => player.setInput('progress', +e.target.value);
+      setInterval(() => { document.getElementById('st').textContent = 'state: ' + player.getState(); }, 120);
+    });
+  </script>
+</body>
+</html>

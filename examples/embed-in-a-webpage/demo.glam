@@ -1,0 +1,21 @@
+{
+  "schema": "glamour/v0",
+  "canvas": { "w": 520, "h": 300, "bg": "#12151b" },
+  "inputs": { "progress": 0.35 },
+  "nodes": [
+    { "id": "orb",   "type": "circle", "x": 150, "y": 150, "r": 52, "fill": "#4c7dff" },
+    { "id": "label", "type": "text",   "x": 250, "y": 120, "text": "click the orb", "fill": "#e6e6e6", "size": 20 },
+    { "id": "track", "type": "rect",   "x": 250, "y": 165, "w": 220, "h": 12, "fill": "#28303c" },
+    { "id": "bar",   "type": "rect",   "x": 250, "y": 165, "w": 20,  "h": 12, "fill": "#5ad67d" }
+  ],
+  "bind": [ { "node": "bar", "prop": "w", "expr": "lerp(10, 220, progress)" } ],
+  "machine": {
+    "initial": "idle",
+    "states": {
+      "idle":   { "set": { "orb.r": 52, "orb.fill": "#4c7dff" }, "on": { "orb.click": "active", "orb.hover": "hot" } },
+      "hot":    { "set": { "orb.r": 60, "orb.fill": "#8ab4ff" }, "on": { "orb.leave": "idle", "orb.click": "active" } },
+      "active": { "set": { "orb.r": 78, "orb.fill": "#ff9f43" }, "on": { "orb.click": "idle" } }
+    },
+    "transition": { "ms": 220, "ease": "easeOut" }
+  }
+}

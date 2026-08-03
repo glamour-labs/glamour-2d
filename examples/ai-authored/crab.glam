@@ -1,0 +1,48 @@
+{
+  "schema": "glamour/v0.1",
+  "canvas": { "w": 400, "h": 300, "bg": "#bfe8fb" },
+  "groups": [
+    { "id": "scene", "x": 0, "y": 0 },
+    { "id": "crab", "x": 200, "y": 196 }
+  ],
+  "nodes": [
+    { "id": "sun", "type": "circle", "x": 350, "y": 46, "r": 26, "fill": "#ffd76b", "group": "scene" },
+    { "id": "sea", "type": "rect", "x": 0, "y": 132, "w": 400, "h": 56, "fill": "#6cc5e0", "group": "scene" },
+    { "id": "sand", "type": "rect", "x": 0, "y": 186, "w": 400, "h": 114, "fill": "#f0d492", "group": "scene" },
+    { "id": "shell", "type": "circle", "x": 70, "y": 262, "r": 9, "fill": "#f6c1c8", "stroke": "#e08b96", "strokeWidth": 2, "group": "scene" },
+
+    { "id": "legL1", "type": "rect", "x": -40, "y": 24, "w": 7, "h": 22, "fill": "#c0392b", "group": "crab" },
+    { "id": "legL2", "type": "rect", "x": -28, "y": 30, "w": 7, "h": 22, "fill": "#c0392b", "group": "crab" },
+    { "id": "legL3", "type": "rect", "x": -16, "y": 34, "w": 7, "h": 20, "fill": "#c0392b", "group": "crab" },
+    { "id": "legR1", "type": "rect", "x": 33, "y": 24, "w": 7, "h": 22, "fill": "#c0392b", "group": "crab" },
+    { "id": "legR2", "type": "rect", "x": 21, "y": 30, "w": 7, "h": 22, "fill": "#c0392b", "group": "crab" },
+    { "id": "legR3", "type": "rect", "x": 9, "y": 34, "w": 7, "h": 20, "fill": "#c0392b", "group": "crab" },
+
+    { "id": "armL", "type": "rect", "x": -58, "y": -2, "w": 32, "h": 12, "fill": "#c0392b", "group": "crab" },
+    { "id": "armR", "type": "rect", "x": 26, "y": -2, "w": 32, "h": 12, "fill": "#c0392b", "group": "crab" },
+    { "id": "clawL", "type": "circle", "x": -66, "y": 4, "r": 21, "fill": "#e8503a", "stroke": "#c0392b", "strokeWidth": 3, "group": "crab" },
+    { "id": "clawR", "type": "circle", "x": 66, "y": 4, "r": 21, "fill": "#e8503a", "stroke": "#c0392b", "strokeWidth": 3, "group": "crab" },
+
+    { "id": "body", "type": "circle", "x": 0, "y": 0, "r": 44, "fill": "#e8503a", "stroke": "#c0392b", "strokeWidth": 4, "group": "crab", "emit": "crab-tapped" },
+    { "id": "spot1", "type": "circle", "x": -16, "y": 8, "r": 6, "fill": "#f2795f", "group": "crab" },
+    { "id": "spot2", "type": "circle", "x": 14, "y": 14, "r": 5, "fill": "#f2795f", "group": "crab" },
+    { "id": "spot3", "type": "circle", "x": 4, "y": -6, "r": 4, "fill": "#f2795f", "group": "crab" },
+
+    { "id": "stalkL", "type": "rect", "x": -18, "y": -74, "w": 6, "h": 34, "fill": "#e8503a", "group": "crab" },
+    { "id": "stalkR", "type": "rect", "x": 12, "y": -74, "w": 6, "h": 34, "fill": "#e8503a", "group": "crab" },
+    { "id": "eyeL", "type": "circle", "x": -15, "y": -76, "r": 13, "fill": "#ffffff", "stroke": "#c0392b", "strokeWidth": 2, "group": "crab" },
+    { "id": "eyeR", "type": "circle", "x": 15, "y": -76, "r": 13, "fill": "#ffffff", "stroke": "#c0392b", "strokeWidth": 2, "group": "crab" },
+    { "id": "pupilL", "type": "circle", "x": -12, "y": -74, "r": 6, "fill": "#2a2320", "group": "crab" },
+    { "id": "pupilR", "type": "circle", "x": 18, "y": -74, "r": 6, "fill": "#2a2320", "group": "crab" },
+
+    { "id": "blushL", "type": "circle", "x": -26, "y": 12, "r": 8, "fill": "#ff8f7a", "opacity": 0.6, "group": "crab" },
+    { "id": "blushR", "type": "circle", "x": 26, "y": 12, "r": 8, "fill": "#ff8f7a", "opacity": 0.6, "group": "crab" },
+    { "id": "mouth", "type": "circle", "x": 0, "y": 18, "r": 6, "fill": "#7a1f14", "group": "crab" },
+
+    { "id": "title", "type": "text", "x": 118, "y": 16, "text": "Tap the crab!", "size": 24, "fill": "#0e5a75" }
+  ],
+  "loops": [
+    { "node": "crab", "prop": "y", "from": 196, "to": 184, "ms": 1400, "mode": "alternate", "ease": "easeInOut" },
+    { "node": "crab", "prop": "x", "from": 195, "to": 205, "ms": 2600, "mode": "alternate", "ease": "easeInOut" }
+  ]
+}

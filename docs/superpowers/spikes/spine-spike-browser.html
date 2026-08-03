@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Approach A spine spike</title>
+<style>
+  body{font-family:ui-monospace,Menlo,monospace;background:#0f1115;color:#e6e6e6;margin:0;padding:16px}
+  #stage{background:#1a1d24;border:1px solid #333;border-radius:8px}
+  #log{white-space:pre-wrap;font-size:13px;line-height:1.5;margin-top:12px;background:#12151b;border:1px solid #2a2f3a;border-radius:8px;padding:12px;max-height:40vh;overflow:auto}
+  .ok{color:#5ad67d}.bad{color:#ff6b6b}.dim{color:#8a94a6}
+  button{background:#2a2f3a;color:#e6e6e6;border:1px solid #3a4150;border-radius:6px;padding:6px 10px;margin-right:8px;cursor:pointer}
+  #inputs{margin:12px 0}
+  input[type=range]{vertical-align:middle}
+</style>
+</head>
+<body>
+<h3 style="margin:0 0 8px">Approach A spine — live proof</h3>
+<div id="inputs">
+  <button id="toggleBtn">click state machine → TOGGLE</button>
+  progress input: <input id="progress" type="range" min="0" max="100" value="0"/>
+  <span id="stateLabel" class="dim">state: —</span>
+</div>
+<div id="stage"></div>
+<div id="log"></div>
+
+<script type="module">
+import Konva from 'https://esm.sh/konva@9';
+import { createMachine, createActor } from 'https://esm.sh/xstate@5';
+
+const logEl = document.getElementById('log');
+const P = (msg, cls='') => { logEl.innerHTML += `<span class="${cls}">${msg}</span>\n`; };
+const OK = (m)=>P('✓ '+m,'ok'); const BAD=(m)=>P('✗ '+m,'bad'); const DIM=(m)=>P(m,'dim');
+
+try {
+  // ---- 1. OUR OWN tiny scene format (not Konva's) ----
+  const sceneDoc = {
+    schema: 'v0',
+    canvas: { width: 640, height: 300, background: '#12151b' },
+    nodes: [
+      { id: 'orb',   type: 'circle', x: 200, y: 150, radius: 48, fill: '#4c7dff', listens: true },
+      { id: 'title', type: 'text',   x: 300, y: 130, text: 'hover the orb • click toggles state', fill: '#e6e6e6', fontSize: 18 },
+      { id: 'ghost', type: 'rect',    x: 300, y: 170, width: 220, height: 10, fill: '#5ad67d' } // driven by external input
+    ]
+  };
+  DIM('scene doc (our format): '+JSON.stringify(sceneDoc).slice(0,80)+' …');
+
+  // ---- 2. FORMAT -> renderer (build Konva nodes from OUR json) ----
+  const stage = new Konva.Stage({ container: 'stage', width: sceneDoc.canvas.width, height: sceneDoc.canvas.height });
+  const layer = new Konva.Layer(); stage.add(layer);
+  stage.container().style.background = sceneDoc.canvas.background;
+  const byId = {};
+  const build = (n) => {
+    let k;
+    if (n.type==='circle') k = new Konva.Circle({ x:n.x, y:n.y, radius:n.radius, fill:n.fill });
+    else if (n.type==='rect') k = new Konva.Rect({ x:n.x, y:n.y, width:n.width, height:n.height, fill:n.fill, cornerRadius:4 });
+    else if (n.type==='text') k = new Konva.Text({ x:n.x, y:n.y, text:n.text, fill:n.fill, fontSize:n.fontSize });
+    k._docId = n.id; byId[n.id]=k; layer.add(k); return k;
+  };
+  sceneDoc.nodes.forEach(build); layer.draw();
+  OK('CLAIM 1 — our-JSON → Konva render: '+sceneDoc.nodes.length+' nodes drawn');
+
+  // ---- 3. round-trip: Konva nodes -> back to OUR json ----
+  const serialize = () => ({
+    schema:'v0', canvas:sceneDoc.canvas,
+    nodes: layer.getChildren().map(k=>{
+      const b = { id:k._docId, type: k.getClassName().toLowerCase(), x:Math.round(k.x()), y:Math.round(k.y()), fill:k.fill() };
+      if (k.getClassName()==='Circle') b.radius=k.radius();
+      if (k.getClassName()==='Rect'){ b.width=k.width(); b.height=k.height(); }
+      if (k.getClassName()==='Text'){ b.text=k.text(); b.fontSize=k.fontSize(); }
+      return b;
+    })
+  });
+  const rt = serialize();
+  const idsMatch = JSON.stringify(rt.nodes.map(n=>n.id)) === JSON.stringify(sceneDoc.nodes.map(n=>n.id));
+  const orbRoundTrips = rt.nodes.find(n=>n.id==='orb').radius === 48;
+  (idsMatch && orbRoundTrips) ? OK('CLAIM 2 — round-trip (nodes→our-JSON, ids+radius preserved)') : BAD('round-trip mismatch');
+
+  // ---- 4. pointer hit-testing: hover + click on a specific shape ----
+  const orb = byId['orb'];
+  let hoverProven=false, clickProven=false;
+  orb.on('mouseenter', ()=>{ orb.fill('#8ab4ff'); layer.draw(); stage.container().style.cursor='pointer';
+    if(!hoverProven){hoverProven=true; OK('CLAIM 3a — pointer HOVER hit-test fired on orb'); window.__hover=true;} });
+  orb.on('mouseleave', ()=>{ orb.fill(actor.getSnapshot().value==='active'?'#ff9f43':'#4c7dff'); layer.draw(); stage.container().style.cursor='default'; });
+  orb.on('click', ()=>{ if(!clickProven){clickProven=true; OK('CLAIM 3b — pointer CLICK hit-test fired on orb');}
+    actor.send({type:'TOGGLE'}); window.__clicks=(window.__clicks||0)+1; });
+
+  // ---- 5. XState statechart driving properties (with tween) ----
+  const machine = createMachine({
+    id:'orb', initial:'idle',
+    states:{ idle:{ on:{ TOGGLE:'active' } }, active:{ on:{ TOGGLE:'idle' } } }
+  });
+  const applyState = (state) => {
+    const active = state==='active';
+    new Konva.Tween({ node:orb, duration:0.25, radius: active?72:48, fill: active?'#ff9f43':'#4c7dff' }).play();
+    document.getElementById('stateLabel').textContent = 'state: '+state;
+  };
+  const actor = createActor(machine);
+  actor.subscribe(s=>applyState(s.value));
+  actor.start();
+  OK('CLAIM 4 — XState statechart started, initial='+actor.getSnapshot().value);
+  document.getElementById('toggleBtn').onclick = ()=>actor.send({type:'TOGGLE'});
+
+  // ---- 6. external host-set input drives a property (data binding) ----
+  const setInput = (name, val) => {
+    if(name==='progress'){ // bind 0..100 -> ghost bar width 20..220 and x
+      const w = 20 + (val/100)*200; byId['ghost'].width(w); layer.draw(); window.__progress=val;
+    }
+  };
+  document.getElementById('progress').oninput = e=>setInput('progress', +e.target.value);
+  setInput('progress', 0);
+  OK('CLAIM 5 — external input setInput(progress) bound to ghost-bar width');
+
+  P('\nALL SPINE CLAIMS RENDERED. Now interacting via automation to prove hit-testing…','dim');
+  window.__spikeReady = true;
+} catch(err){
+  BAD('SPIKE THREW: '+err.message);
+  console.error(err);
+  window.__spikeError = err.message;
+}
+</script>
+</body>
+</html>

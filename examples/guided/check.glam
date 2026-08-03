@@ -1,0 +1,16 @@
+{
+  "schema": "glamour/v0.1",
+  "canvas": { "w": 280, "h": 220, "bg": "#ffffff" },
+  "nodes": [
+    { "id": "track", "type": "stroke", "x": 0, "y": 0, "points": [60, 120, 112, 170, 214, 60], "stroke": "#d9e2ea", "strokeWidth": 24, "tension": 0 },
+    { "id": "ink", "type": "stroke", "x": 0, "y": 0, "points": [], "stroke": "#1a1a1a", "strokeWidth": 20, "tension": 0 },
+    { "id": "handle", "type": "circle", "x": 60, "y": 120, "r": 18, "fill": "#1c9ff2" },
+    { "id": "arrow", "type": "stroke", "x": 60, "y": 120, "points": [-6, -4, 6, -4, 0, 8], "closed": true, "fill": "#ffffff", "tension": 0 }
+  ],
+  "guided": {
+    "strokes": [
+      { "path": [60, 120, 112, 170, 214, 60], "into": "ink", "handle": "handle", "arrow": "arrow" }
+    ],
+    "emit": "checked"
+  }
+}
