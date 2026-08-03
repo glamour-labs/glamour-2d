@@ -27,6 +27,8 @@ export interface SceneHandle {
   applyStateSet(set: Record<string, number | string>, transitionMs: number, ease: string): void;
   getIntersection(pt: { x: number; y: number }): NodeHandle | null;
   destroy(): void;
+  /** True while the WebGL context is unavailable (lost, awaiting restore). */
+  readonly isContextLost: boolean;
 }
 
 /**
@@ -216,6 +218,15 @@ export class NodeHandle {
       p = p.parent;
     }
     return { x, y };
+  }
+
+  /**
+   * Drop the cached text raster. Called after a WebGL context restore: the GPU
+   * texture is gone, and the renderer's cache keys off this raster's identity,
+   * so a fresh object is what makes it re-upload.
+   */
+  invalidateRaster(): void {
+    this.raster = null;
   }
 
   /** Cached text raster, re-rasterized only when a text-affecting prop changed. */
@@ -474,6 +485,17 @@ class SceneCore {
     this.stage = new StageShim(canvas, doc.canvas.w, doc.canvas.h);
     this.layer = new LayerShim(this);
     this.renderer = new GlRenderer(canvas, doc.canvas.w, doc.canvas.h, dpr);
+    // A restored context has no GPU state at all, so the whole scene has to be
+    // repainted — and every text node must re-upload, because the renderer's
+    // texture cache is keyed on raster identity.
+    this.renderer.onRestored = () => {
+      for (const node of this.display) node.invalidateRaster();
+      this.dirty = true;
+      this.draw();
+    };
+    this.renderer.onLost = () => {
+      this.dirty = true;
+    };
     this.attachPointerDispatch();
   }
 
@@ -520,6 +542,9 @@ class SceneCore {
 
   draw(): void {
     if (this.destroyed || !this.renderer) return;
+    // While the context is lost every GL call fails; the renderer no-ops
+    // internally, but returning early also skips the per-node tessellation work.
+    if (this.renderer.isContextLost) return;
     const r = this.renderer;
     r.begin(this.bg);
     for (const node of this.display) this.drawOne(r, node);
@@ -887,6 +912,15 @@ class SceneCore {
     return this.renderer.readPixels();
   }
 
+  get isContextLost(): boolean {
+    return this.renderer?.isContextLost ?? false;
+  }
+
+  /** Test seam: force a WebGL context loss/restore cycle. */
+  __simulateContextLoss(restoreAfterMs = 0): boolean {
+    return this.renderer?.__simulateContextLoss(restoreAfterMs) ?? false;
+  }
+
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
@@ -1168,6 +1202,9 @@ export function buildScene(doc: GlamDoc, container?: unknown, opts: BuildSceneOp
     applyStateSet,
     getIntersection,
     destroy: () => core.destroy(),
+    get isContextLost() {
+      return core.isContextLost;
+    },
   };
   // Non-enumerable seams for the headless renderer and tests.
   Object.defineProperty(handle, '__core', { value: core, enumerable: false });

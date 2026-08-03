@@ -207,39 +207,75 @@ interface Program {
   u: Record<string, WebGLUniformLocation | null>;
 }
 
+const CONTEXT_ATTRS: WebGLContextAttributes = {
+  antialias: true,
+  alpha: true,
+  premultipliedAlpha: true,
+  stencil: true,
+  preserveDrawingBuffer: true,
+};
+
 export class GlRenderer {
-  readonly gl: WebGL2RenderingContext;
+  gl: WebGL2RenderingContext;
   readonly width: number;
   readonly height: number;
   readonly dpr: number;
 
-  private solid: Program;
-  private gradient: Program;
-  private texture: Program;
-  private blur: Program;
-  private tint: Program;
-  private vao: WebGLVertexArrayObject;
-  private buf: WebGLBuffer;
+  private solid!: Program;
+  private gradient!: Program;
+  private texture!: Program;
+  private blur!: Program;
+  private tint!: Program;
+  private vao!: WebGLVertexArrayObject;
+  private buf!: WebGLBuffer;
   private mesh = new Mesh();
   private texCache = new Map<string, WebGLTexture>();
   private fbo: { fb: WebGLFramebuffer; tex: WebGLTexture } | null = null;
   private fboB: { fb: WebGLFramebuffer; tex: WebGLTexture } | null = null;
   private destroyed = false;
 
-  constructor(canvas: HTMLCanvasElement | OffscreenCanvas, width: number, height: number, dpr = 1) {
-    const gl = canvas.getContext('webgl2', {
-      antialias: true,
-      alpha: true,
-      premultipliedAlpha: true,
-      stencil: true,
-      preserveDrawingBuffer: true,
-    }) as WebGL2RenderingContext | null;
-    if (!gl) throw new Error('GlRenderer: WebGL2 unavailable');
-    this.gl = gl;
+  /**
+   * True between `webglcontextlost` and `webglcontextrestored`. Every draw path
+   * turns into a no-op while set: a lost context makes every GL call fail, and
+   * throwing from a frame callback would take the whole player down for what is
+   * a recoverable, browser-initiated event.
+   */
+  private lost = false;
+
+  /** Called after a successful restore so the owner can repaint. */
+  onRestored: (() => void) | null = null;
+  /** Called when the context is lost, so the owner can stop asking for frames. */
+  onLost: (() => void) | null = null;
+
+  private detachHandlers: Array<() => void> = [];
+
+  constructor(
+    readonly canvas: HTMLCanvasElement | OffscreenCanvas,
+    width: number,
+    height: number,
+    dpr = 1,
+  ) {
     this.width = width;
     this.height = height;
     this.dpr = dpr;
+    this.gl = this.acquireContext();
+    this.initGpu();
+    this.attachContextHandlers();
+  }
 
+  private acquireContext(): WebGL2RenderingContext {
+    const gl = this.canvas.getContext('webgl2', CONTEXT_ATTRS) as WebGL2RenderingContext | null;
+    if (!gl) throw new Error('GlRenderer: WebGL2 unavailable');
+    return gl;
+  }
+
+  /**
+   * Create every GPU-side resource. Runs at construction AND again after a
+   * context restore — nothing created here survives a loss, so it must all be
+   * rebuildable from CPU state alone.
+   */
+  private initGpu(): void {
+    const gl = this.gl;
     this.solid = this.program(VS_QUAD, FS_SOLID, ['u_res', 'u_color']);
     this.gradient = this.program(VS_QUAD, FS_GRADIENT, [
       'u_res', 'u_kind', 'u_from', 'u_to', 'u_r0', 'u_r1', 'u_nstops', 'u_alpha',
@@ -260,11 +296,80 @@ export class GlRenderer {
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
-    gl.viewport(0, 0, Math.round(width * dpr), Math.round(height * dpr));
+    gl.viewport(0, 0, Math.round(this.width * this.dpr), Math.round(this.height * this.dpr));
     gl.enable(gl.BLEND);
     // Everything the shaders emit is premultiplied.
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.DEPTH_TEST);
+  }
+
+  /**
+   * A WebGL context can be taken away at any time — backgrounded tab, GPU reset,
+   * memory pressure, or another page winning the GPU. Canvas2D has no equivalent
+   * failure mode, which is why v1 never needed this; without it the canvas goes
+   * blank permanently, which in a long lesson means a student staring at nothing.
+   *
+   * `preventDefault()` on the lost event is REQUIRED: without it the browser
+   * never fires `webglcontextrestored` and recovery is impossible.
+   */
+  private attachContextHandlers(): void {
+    const target = this.canvas as unknown as {
+      addEventListener?: (t: string, fn: (e: Event) => void) => void;
+      removeEventListener?: (t: string, fn: (e: Event) => void) => void;
+    };
+    if (typeof target.addEventListener !== 'function') return;
+
+    const onLost = (e: Event): void => {
+      e.preventDefault();
+      this.lost = true;
+      // Every GL handle is now invalid. Drop the texture cache so a restore
+      // re-uploads rather than binding dead names; the CPU-side rasters that
+      // produced them live on the nodes and survive.
+      this.texCache.clear();
+      this.fbo = null;
+      this.fboB = null;
+      this.onLost?.();
+    };
+
+    const onRestored = (): void => {
+      if (this.destroyed) return;
+      try {
+        this.gl = this.acquireContext();
+        this.initGpu();
+        this.lost = false;
+        this.onRestored?.();
+      } catch (err) {
+        // Stay in the lost state rather than half-initialized; a later restore
+        // event can try again.
+        // eslint-disable-next-line no-console
+        console.error('GlRenderer: context restore failed', err);
+      }
+    };
+
+    target.addEventListener('webglcontextlost', onLost);
+    target.addEventListener('webglcontextrestored', onRestored);
+    this.detachHandlers.push(() => {
+      target.removeEventListener?.('webglcontextlost', onLost);
+      target.removeEventListener?.('webglcontextrestored', onRestored);
+    });
+  }
+
+  /** True while the GPU context is unavailable. */
+  get isContextLost(): boolean {
+    return this.lost || this.gl.isContextLost();
+  }
+
+  /** Test seam: force a loss/restore cycle through the standard extension. */
+  __simulateContextLoss(restoreAfterMs = 0): boolean {
+    const ext = this.gl.getExtension('WEBGL_lose_context');
+    if (!ext) return false;
+    ext.loseContext();
+    if (restoreAfterMs >= 0) {
+      setTimeout(() => {
+        try { ext.restoreContext(); } catch { /* already gone */ }
+      }, restoreAfterMs);
+    }
+    return true;
   }
 
   private compile(type: number, src: string): WebGLShader {
@@ -299,6 +404,7 @@ export class GlRenderer {
 
   /** Clear the whole canvas to a background colour. */
   begin(bg: Rgba): void {
+    if (this.isContextLost) return;
     const gl = this.gl;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, Math.round(this.width * this.dpr), Math.round(this.height * this.dpr));
@@ -317,7 +423,7 @@ export class GlRenderer {
     alpha: number,
     shadow?: ShadowPaint,
   ): void {
-    if (alpha <= 0) return;
+    if (alpha <= 0 || this.isContextLost) return;
     this.mesh.clear();
     build(this.mesh);
     if (this.mesh.count === 0) return;
@@ -517,6 +623,11 @@ export class GlRenderer {
   /** Read the canvas back as raw RGBA — used by the headless render path. */
   readPixels(): Uint8Array {
     const gl = this.gl;
+    if (this.isContextLost) {
+      // Transparent black rather than a throw: a caller mid-capture gets an
+      // obviously-empty frame instead of an exception from a recoverable event.
+      return new Uint8Array(Math.round(this.width * this.dpr) * Math.round(this.height * this.dpr) * 4);
+    }
     const W = Math.round(this.width * this.dpr);
     const H = Math.round(this.height * this.dpr);
     const out = new Uint8Array(W * H * 4);
@@ -528,7 +639,17 @@ export class GlRenderer {
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    for (const off of this.detachHandlers) off();
+    this.detachHandlers = [];
     const gl = this.gl;
+    // A lost context has already reclaimed everything; deleting dead handles is
+    // harmless but pointless, and gl.delete* on a lost context can warn.
+    if (this.lost || gl.isContextLost()) {
+      this.texCache.clear();
+      this.fbo = null;
+      this.fboB = null;
+      return;
+    }
     for (const t of this.texCache.values()) gl.deleteTexture(t);
     this.texCache.clear();
     for (const f of [this.fbo, this.fboB]) {

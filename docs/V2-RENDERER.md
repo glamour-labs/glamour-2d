@@ -217,12 +217,44 @@ What it does NOT establish, and is still open:
 - **`tension` on a *closed* stroke** still uses the cardinal spline; Konva has a
   separate closed-line routine. Closed tensioned strokes in the corpus are
   low-tension fills that agree within threshold (1.23%).
-- **No WebGL context-loss handling.** A WebGL context can be lost — backgrounded
-  tab, GPU reset, memory pressure — and the canvas then goes blank permanently.
-  Canvas2D has no equivalent failure mode, so v1 never needed this and v2 has not
-  added it. This is the most consequential remaining gap for a long student
-  session: `webglcontextlost` / `webglcontextrestored` need handling that rebuilds
-  the scene. Not a parity issue, which is why no gate here can see it.
+- ~~No WebGL context-loss handling.~~ **Handled** — see below.
+
+## WebGL context loss
+
+A WebGL context can be taken away at any time — backgrounded tab, GPU reset,
+memory pressure, another page winning the GPU. Canvas2D has no equivalent failure
+mode, so v1 never needed this; without handling, v2's canvas goes blank
+**permanently**, which in a long lesson is a student staring at nothing. It is not
+a parity issue, so no parity gate can see it.
+
+How it works:
+
+- `GlRenderer` listens for `webglcontextlost` / `webglcontextrestored` on the
+  canvas. **`preventDefault()` on the lost event is required** — without it the
+  browser never fires `restored` and recovery is impossible.
+- All GPU-side creation moved into `initGpu()`, which runs at construction and
+  again on restore. Nothing it creates survives a loss, so everything must be
+  rebuildable from CPU state alone.
+- While lost, every draw path is a **no-op rather than a throw**. A lost context
+  fails every GL call, and throwing from a frame callback would take the whole
+  player down over a recoverable, browser-initiated event. `readPixels` returns a
+  transparent buffer for the same reason.
+- On restore the scene repaints itself with no caller involvement, and **every
+  text node's CPU raster is invalidated first** — the renderer's texture cache
+  keys on raster identity, so without that the shapes come back and the text does
+  not.
+- `SceneHandle.isContextLost` exposes the state; `__simulateContextLoss(ms)` is
+  the test seam, driving the real `WEBGL_lose_context` extension.
+
+Covered by `packages/core/test/context-loss.test.ts` (4 tests, browser project).
+Mutation-tested: deleting the repaint-on-restore turns both repaint tests red.
+
+> Two ways these tests could have passed while proving nothing, both fixed:
+> `if (!supported) return` silently skipped when the extension was absent — it now
+> asserts availability instead. And asserting merely "something is drawn" passes
+> even with no repaint at all, because a restored context often keeps presenting
+> the stale pre-loss frame until the next draw; both tests now compare *coverage*
+> against the pre-loss frame within 10%.
 
 ## Latent v1 bugs this port surfaced
 
