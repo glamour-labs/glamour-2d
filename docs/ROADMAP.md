@@ -22,14 +22,25 @@ map; DECISIONS is the *why* of settled choices; BUILD-NOTES is the build/finding
 - **Proofs** in `sketches/`: progress-ring, toggle-switch, draw-letter-a (tap-through), flappy,
   crab-game, orb / Dolli, and **trace-letter** (Rung 2 — real interactive tracing).
 
-## ✅ CUTOVER DONE — v2 is the live engine (2026-08-03)
+## ✅ CUTOVER DONE — this repo IS the live engine (2026-08-03)
+
+**Directory layout after the rename (same day):**
+
+| Path | Role |
+|---|---|
+| `~/Project/glamour` | **LIVE** — this repo, the WebGL2 engine |
+| `~/Project/glamour-v1-oracle` | retired Konva engine, kept ONLY as the pixel oracle |
+
+The names are deliberate: the live project holds the plain name, and the oracle's name states its
+only remaining job. Pointing a gate at `~/Project/glamour` instead of the oracle would compare this
+repo against itself — everything would MATCH and prove nothing.
 
 The global authoring path now runs v2. All three artifacts were repointed:
 
 | Artifact | Now |
 |---|---|
-| `~/.local/bin/glam` | `node ~/Project/glamour-v2/packages/cli/dist/cli.js` — **no Node pin** |
-| `~/.claude/skills/cast-glamour/` | **symlink** → `~/Project/glamour-v2/skills/cast-glamour` (edits are live; nothing to re-copy) |
+| `~/.local/bin/glam` | `node ~/Project/glamour/packages/cli/dist/cli.js` — **no Node pin** |
+| `~/.claude/skills/cast-glamour/` | **symlink** → `~/Project/glamour/skills/cast-glamour` (edits are live; nothing to re-copy) |
 | `~/.claude/agents/glamour-smith.md` | Node-20 block replaced by the Chromium prerequisite |
 
 Verified from a neutral directory on **Node 24** (v1 cannot run there at all — it needs the Node-20
@@ -38,7 +49,7 @@ rather than being instant, and an `arc` + glow document — v2-only paint — va
 
 Backup of the pre-cutover artifacts: `~/.glamour-cutover-backup-<timestamp>/`.
 
-**`~/Project/glamour` (v1) is RETIRED but must NOT be deleted, and must stay BUILT.** It is the pixel
+**`~/Project/glamour-v1-oracle` is RETIRED but must NOT be deleted, and must stay BUILT.** It is the pixel
 oracle for both parity gates. Its README carries the banner. A stale `dist/` there has already
 produced one wrong parity result — if the gates ever look suspiciously good or bad, rebuild v1 first.
 
@@ -59,7 +70,7 @@ command puts it right:
 ```bash
 node scripts/gen-oracle.mjs /tmp/glam-oracle     # renders every .glam with v1's CLI (via Node 20)
 node scripts/parity.mjs      /tmp/glam-oracle parity-out
-node scripts/frame-parity.mjs ~/Project/glamour  frame-parity-out
+node scripts/frame-parity.mjs ~/Project/glamour-v1-oracle  frame-parity-out
 ```
 
 `gen-oracle.mjs` invokes v1's CLI through Node 20.19.4 explicitly — v1 still needs that ABI for its

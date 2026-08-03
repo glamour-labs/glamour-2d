@@ -108,5 +108,10 @@ export function assertOracleRendersFresh(v1Repo, oracleDir) {
   }
 }
 
-/** Default oracle location — v1 is retired in place and kept as the spec. */
-export const DEFAULT_V1_REPO = path.join(process.env.HOME ?? '', 'Project', 'glamour');
+/**
+ * Default oracle location. The retired Konva engine lives here and is kept ONLY to
+ * serve as the spec — the directory name says so, because a bare `glamour` would
+ * now be the LIVE repo and pointing the gates at themselves would be a silent
+ * tautology (everything would match, proving nothing).
+ */
+export const DEFAULT_V1_REPO = path.join(process.env.HOME ?? '', 'Project', 'glamour-v1-oracle');

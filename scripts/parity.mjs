@@ -9,7 +9,7 @@
  *   node scripts/parity.mjs <oracle-dir> [out-dir]
  *
  * Refuses to run against a stale oracle. Set GLAM_V1_REPO to point at the v1 repo
- * if it is not at ~/Project/glamour.
+ * if it is not at ~/Project/glamour-v1-oracle.
  *
  * The diff itself runs inside Chromium (decoding PNGs needs a real image
  * decoder, and the browser is already a dependency of the render path).

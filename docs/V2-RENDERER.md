@@ -5,7 +5,7 @@ gone; the scene is drawn with hand-written WebGL2. The `.glam` format, the state
 machine, bindings, ink, guided strokes, the host API and the React binding are
 untouched, and **every v1 document loads unedited**.
 
-v1 stays installed at `~/Project/glamour` and is the **pixel oracle** for this
+v1 stays installed at `~/Project/glamour-v1-oracle` and is the **pixel oracle** for this
 repo. It is not a dependency; it is the spec.
 
 ## What changed
@@ -68,7 +68,7 @@ Put a test in the wrong project and the failure is legible: a scene test in
 
 ```bash
 # one-time: build v1 so it can act as the oracle
-cd ~/Project/glamour && nvm use && pnpm install && pnpm build
+cd ~/Project/glamour-v1-oracle && nvm use && pnpm install && pnpm build
 # render the references
 for f in $(find . -name '*.glam' -not -path '*/node_modules/*'); do \
   node packages/cli/dist/cli.js render "$f" -o /tmp/oracle/$(echo $f | tr / _).png; done
@@ -106,7 +106,7 @@ about `loops`, `wander`, or the tween engine — and v2's tween engine and rAF
 ticker are both hand-written replacements for Konva's.
 
 ```bash
-node scripts/frame-parity.mjs ~/Project/glamour frame-parity-out
+node scripts/frame-parity.mjs ~/Project/glamour-v1-oracle frame-parity-out
 # exit 0 = pass, 1 = fail.  GLAM_FRAMES=41 for a longer run.
 ```
 

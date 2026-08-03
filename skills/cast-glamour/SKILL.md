@@ -123,7 +123,7 @@ Never hand back a `.glam` that hasn't been validated and rendered. This is not o
 > Glamour repo — so it works from any directory, no PATH juggling. There is no Node version pin any
 > more (the native `canvas` package went away with Konva). If `glam` errors that a build is missing:
 > ```
-> cd ~/Project/glamour-v2 && pnpm build
+> cd ~/Project/glamour && pnpm build
 > ```
 >
 > **`render` needs Chromium.** The renderer is WebGL2, which has no in-process rasterizer, so
