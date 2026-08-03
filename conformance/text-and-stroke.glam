@@ -1,0 +1,32 @@
+{
+  "schema": "glamour/v0.1",
+  "canvas": { "w": 440, "h": 300, "bg": "#ffffff" },
+  "nodes": [
+    { "id": "tNormal", "type": "text", "x": 20, "y": 20, "text": "Normal 20", "size": 20, "fill": "#1a1a1a" },
+    { "id": "tBold", "type": "text", "x": 20, "y": 52, "text": "Bold 20", "size": 20, "fontStyle": "bold", "fill": "#1a1a1a" },
+    { "id": "tItalic", "type": "text", "x": 20, "y": 84, "text": "Italic 20", "size": 20, "fontStyle": "italic", "fill": "#1a1a1a" },
+    { "id": "tBoldItalic", "type": "text", "x": 20, "y": 116, "text": "Italic bold 20", "size": 20, "fontStyle": "italic bold", "fill": "#1a1a1a" },
+    { "id": "tSmall", "type": "text", "x": 250, "y": 20, "text": "Small 11", "size": 11, "fill": "#556" },
+    { "id": "tColour", "type": "text", "x": 250, "y": 52, "text": "Coloured", "size": 22, "fill": "#d92b2b" },
+    { "id": "tRotated", "type": "text", "x": 250, "y": 100, "text": "Rotated 12", "size": 16, "fill": "#2b52d4", "rotation": 12 },
+
+    { "id": "sSolid", "type": "stroke", "x": 0, "y": 0,
+      "points": [24, 170, 96, 170, 168, 170], "stroke": "#1a1a1a", "strokeWidth": 10, "tension": 0 },
+    { "id": "sDashed", "type": "stroke", "x": 0, "y": 0,
+      "points": [24, 196, 168, 196], "stroke": "#1c9ff2", "strokeWidth": 7, "dash": [15, 12] },
+    { "id": "sDashedFine", "type": "stroke", "x": 0, "y": 0,
+      "points": [24, 216, 168, 216], "stroke": "#8a63d2", "strokeWidth": 4, "dash": [4, 6] },
+    { "id": "sTensioned", "type": "stroke", "x": 0, "y": 0,
+      "points": [24, 250, 60, 232, 100, 274, 140, 240, 176, 262],
+      "stroke": "#5ad67d", "strokeWidth": 9, "tension": 0.5 },
+
+    { "id": "sClosedFilled", "type": "stroke", "x": 0, "y": 0,
+      "points": [230, 170, 262, 232, 330, 232, 276, 272, 296, 290, 230, 250, 164, 290, 184, 272, 130, 232],
+      "closed": true, "fill": "#ffc800", "tension": 0 },
+    { "id": "sClosedFilledStroked", "type": "stroke", "x": 360, "y": 210,
+      "points": [0, -34, 30, 0, 0, 34, -30, 0],
+      "closed": true, "fill": "#ffffff", "stroke": "#d92b2b", "strokeWidth": 6, "tension": 0 },
+    { "id": "sRotated", "type": "stroke", "x": 380, "y": 100,
+      "points": [-30, 0, 30, 0], "stroke": "#b07d00", "strokeWidth": 8, "rotation": 40 }
+  ]
+}

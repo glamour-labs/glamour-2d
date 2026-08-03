@@ -1,0 +1,68 @@
+{
+  "schema": "glamour/v0.1",
+  "canvas": { "w": 420, "h": 300, "bg": "#12151b" },
+  "nodes": [
+    { "id": "linRect", "type": "rect", "x": 24, "y": 24, "w": 160, "h": 90,
+      "fill": "#000000",
+      "fillGradient": {
+        "type": "linear",
+        "from": { "x": 0, "y": 0 },
+        "to": { "x": 160, "y": 0 },
+        "stops": [
+          { "offset": 0, "color": "#4c7dff" },
+          { "offset": 0.5, "color": "#33ffff" },
+          { "offset": 1, "color": "#5ad67d" }
+        ]
+      }
+    },
+    { "id": "linRectVertical", "type": "rect", "x": 236, "y": 24, "w": 160, "h": 90,
+      "fill": "#000000",
+      "fillGradient": {
+        "type": "linear",
+        "from": { "x": 0, "y": 0 },
+        "to": { "x": 0, "y": 90 },
+        "stops": [
+          { "offset": 0, "color": "#ff9f43" },
+          { "offset": 1, "color": "#d92b2b" }
+        ]
+      }
+    },
+
+    { "id": "radOrb", "type": "circle", "x": 104, "y": 200, "r": 58,
+      "fill": "#000000",
+      "fillGradient": {
+        "type": "radial",
+        "center": { "x": 0, "y": 0 },
+        "startRadius": 0,
+        "endRadius": 58,
+        "stops": [
+          { "offset": 0, "color": "#ffffff" },
+          { "offset": 0.45, "color": "#33ccff" },
+          { "offset": 1, "color": "#0b2a6b" }
+        ]
+      }
+    },
+    { "id": "radOffset", "type": "circle", "x": 240, "y": 200, "r": 52,
+      "fill": "#000000",
+      "fillGradient": {
+        "type": "radial",
+        "center": { "x": -18, "y": -18 },
+        "startRadius": 4,
+        "endRadius": 66,
+        "stops": [
+          { "offset": 0, "color": "#fdeeb3" },
+          { "offset": 1, "color": "#b04a00" }
+        ]
+      }
+    },
+
+    { "id": "glowOrb", "type": "circle", "x": 356, "y": 200, "r": 34,
+      "fill": "#33ffff",
+      "shadowColor": "#33ffff", "shadowBlur": 26, "shadowOpacity": 0.9,
+      "shadowOffsetX": 0, "shadowOffsetY": 0 },
+    { "id": "dropShadowRect", "type": "rect", "x": 24, "y": 262, "w": 120, "h": 26,
+      "cornerRadius": 6, "fill": "#ffffff",
+      "shadowColor": "#000000", "shadowBlur": 12, "shadowOpacity": 0.8,
+      "shadowOffsetX": 6, "shadowOffsetY": 6 }
+  ]
+}

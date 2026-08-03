@@ -80,32 +80,86 @@ node scripts/parity.mjs /tmp/oracle parity-out
 Each document is rendered on both backends and diffed per pixel over white. A
 document passes when fewer than 2% of pixels differ by more than 24/255.
 
-Current status: **15/15 MATCH**, worst case 1.91 mean / 1.03% over threshold.
+Current status: **18/19 MATCH**. The one DIFF is `conformance/text-and-stroke.glam`
+at 3.09%, entirely attributable to text (see Known residuals).
+
+> **BUILD v1 BEFORE GENERATING THE ORACLE.** v1's `dist/` was a day stale, so the
+> first oracle was generated from out-of-date v1 behaviour and quietly mis-scored
+> several documents — `dash` in particular was absent from the stale bundle, which
+> inflated every dashed doc's diff (`letter-h-easy` read 1.03%; against a correct
+> oracle it is 0.10%). An oracle is only a spec if it is built from current source.
 
 Excluded:
 - `sketches/draw-letter-a/letter-a.glam`, `sketches/trace-letter/letter-a.glam` —
-  legacy, and dominated by one huge glyph, so they measure the two rasterizers'
-  font engines rather than this renderer.
-- `sketches/draw-letter/letter-y-hard.glam` — **fails validation in v1 today**
-  (`ink.into: Required`), so there is no reference to compare against. A
-  pre-existing bug, not a v2 regression.
+  legacy and unused (King, 2026-08-03), and dominated by one huge glyph, so they
+  measure the two rasterizers' font engines rather than this renderer.
+
+### Conformance documents
+
+The 18 real documents only exercise `circle`, `rect`, `text` and `stroke`. Parity
+across them proved **nothing** about `ellipse`, `arc`, `fillGradient`, shadow/glow,
+`cornerRadius` or `fontStyle` — all of which appear **zero** times in the corpus.
+`conformance/*.glam` exist to close that hole and are part of the gate:
+
+| file | covers |
+|---|---|
+| `shapes.glam` | ellipse, arc (pie/ring/full), cornerRadius, rotation, stroke-on-shape |
+| `paint.glam` | linear + radial gradients, glow, offset drop shadow |
+| `text-and-stroke.glam` | fontStyle normal/bold/italic/italic-bold, rotated text, dash, tension, closed+filled |
+
+Writing them immediately found two renderer bugs that the corpus could never have
+caught — see below.
+
+## Bugs the conformance docs found
+
+Both were invisible to the 18-document corpus, and both were real:
+
+1. **Glow was vertically flipped and mis-offset.** The vertex shader negates
+   `clip.y` so geometry is in canvas space (top-left origin); rendering that into
+   an FBO — which has a *bottom*-left origin — stores the image upside down, and
+   sampling with the same convention double-flipped it. Every glow landed at
+   `h - y`. The shadow offset was also applied by moving the composite quad, which
+   crops the texture instead of shifting it. Both corrections now live in
+   `FS_TINT`, and the intermediate blur passes deliberately do *not* flip.
+2. **Rotated text rendered upright and truncated.** The stencil mask is built
+   from rotated geometry, but the texture sampler was axis-aligned, so the glyph
+   was sampled unrotated then clipped by a rotated mask. `FS_TEXTURE` now
+   un-rotates the fragment position about the node origin.
+
+A third, smaller fidelity gap: `tension` was a generic cardinal spline, which
+drifted ~4% at tension 0.5. It is now a faithful port of Konva's
+`_getControlPoints` / `_expandPoints` plus curve flattening — 4.41% → 2.02%.
 
 ## Known residuals
 
-- **Large text cannot be pixel-identical across the two backends.** node-canvas
-  (FreeType) and Chromium (Skia) resolve and hint the implicit default family
-  differently. Small text is within threshold; a glyph filling the canvas is not.
+- **Text cannot be pixel-identical across the two backends.** node-canvas
+  (FreeType) and Chromium (Skia) hint the implicit default family differently.
+  This is uniform across all seven text nodes (9–15% over threshold at 20px, 3.7%
+  at 11px) and is the entire remaining DIFF. Rotated text reads highest (14.7%)
+  because diagonal glyph edges amplify the same disagreement — its ink bounding
+  box matches v1 to 1px, so the geometry is right.
 - **`glam render` is ~1–2s**, not instant. Chromium must be installed:
   `npx playwright install chromium`.
 - **`fontFamily` is still not in the format.** v2 pins `Arial` — Konva's old
-  default. Adding a `fontFamily` field is the real fix.
+  default. Adding a `fontFamily` field is the real fix for the text residual.
+- **`tension` on a *closed* stroke** still uses the cardinal spline; Konva has a
+  separate closed-line routine. Closed tensioned strokes in the corpus are
+  low-tension fills that agree within threshold (1.23%).
 
 ## Latent v1 bugs this port surfaced
 
-1. `letter-y-hard.glam` does not validate (`ink.into: Required`).
-2. `apps/studio`'s `GlamPlayer` mock was missing `onGuided`; v1 typechecks only
-   because its `dist/*.d.ts` predates the field. A clean rebuild exposes it.
+1. **v1's build is broken on a clean rebuild.** `apps/studio`'s `GlamPlayer` mock
+   is missing `onGuided`; v1 only typechecks because its committed `dist/*.d.ts`
+   predates the field. Running `pnpm -r build` in v1 fails at `apps/studio`.
+   Proven by execution, not inference.
+2. **v1's `dist/` was a day stale**, so its shipped bundle predated `dash`
+   support that exists in its source. Anything consuming v1's build — including
+   an oracle — was reading old behaviour.
 3. The player ran three tsup configs concurrently with `clean: true` on one of
    them — a clean racing a sibling's write deleted `glam-player.umd.js`
    mid-build. In v1 this was invisible; here it surfaced as an intermittent
    "UMD bundle not found". `dist` is now cleaned once by the build script.
+
+Retracted from an earlier draft of this document: `letter-y-hard.glam` was
+reported as failing validation. It does not — that was the stale v1 build. It
+renders and matches at 0.05%.

@@ -246,20 +246,121 @@ function between(pts: readonly number[], cum: readonly number[], a: number, b: n
 }
 
 /**
- * Catmull-Rom-ish smoothing to approximate Konva's `tension` on a line.
- * Subdivides each span so a tensioned stroke reads curved rather than faceted.
+ * Smooth a polyline the way Konva's `tension` did, so a tensioned stroke keeps
+ * the same curve after the renderer swap.
+ *
+ * This is a faithful port of Konva's algorithm, not an approximation: a generic
+ * cardinal spline uses a different parameterization and drifted ~4% on a
+ * tension-0.5 stroke (caught by conformance/text-and-stroke.glam). Konva
+ * expands each interior point into a control-point triple
+ * (Util._getControlPoints), then draws quad -> cubics -> quad through them; we
+ * do the same and flatten the curves into line segments.
+ *
+ * `closed` still uses the simpler cardinal path — Konva has a separate
+ * closed-line routine, and closed tensioned strokes in the corpus are all
+ * low-tension fills that already agree within threshold.
  */
 export function tensionize(pts: readonly number[], tension: number, closed = false): number[] {
+  if (!tension || pts.length < 6) return pts.slice();
+  if (closed) return cardinalClosed(pts, tension);
+
+  const tp = expandPoints(pts, tension);
+  if (tp.length < 4) return pts.slice();
+
+  const out: number[] = [pts[0], pts[1]];
+  const lastOf = (): [number, number] => [out[out.length - 2], out[out.length - 1]];
+
+  // Leading quadratic: control tp[0..1], end tp[2..3].
+  flattenQuad(out, lastOf(), [tp[0], tp[1]], [tp[2], tp[3]]);
+
+  // Interior cubics, consuming six values per span exactly as Konva does.
+  let n = 4;
+  while (n < tp.length - 2) {
+    flattenCubic(
+      out,
+      lastOf(),
+      [tp[n], tp[n + 1]],
+      [tp[n + 2], tp[n + 3]],
+      [tp[n + 4], tp[n + 5]],
+    );
+    n += 6;
+  }
+
+  // Trailing quadratic back to the real final point.
+  flattenQuad(
+    out,
+    lastOf(),
+    [tp[tp.length - 4], tp[tp.length - 3]],
+    [pts[pts.length - 2], pts[pts.length - 1]],
+  );
+  return out;
+}
+
+/** Konva Util._getControlPoints. */
+function controlPoints(
+  x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, t: number,
+): [number, number, number, number] {
+  const d01 = Math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2);
+  const d12 = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+  const fa = (t * d01) / (d01 + d12);
+  const fb = (t * d12) / (d01 + d12);
+  return [
+    x1 - fa * (x2 - x0), y1 - fa * (y2 - y0),
+    x1 + fb * (x2 - x0), y1 + fb * (y2 - y0),
+  ];
+}
+
+/** Konva Util._expandPoints. */
+function expandPoints(p: readonly number[], tension: number): number[] {
+  const out: number[] = [];
+  for (let n = 2; n < p.length - 2; n += 2) {
+    const cp = controlPoints(p[n - 2], p[n - 1], p[n], p[n + 1], p[n + 2], p[n + 3], tension);
+    if (Number.isNaN(cp[0])) continue;
+    out.push(cp[0], cp[1], p[n], p[n + 1], cp[2], cp[3]);
+  }
+  return out;
+}
+
+/** Segments per flattened curve span — sub-pixel at these scales. */
+const CURVE_STEPS = 12;
+
+function flattenQuad(
+  out: number[], from: [number, number], c: [number, number], to: [number, number],
+): void {
+  for (let i = 1; i <= CURVE_STEPS; i++) {
+    const t = i / CURVE_STEPS;
+    const u = 1 - t;
+    out.push(
+      u * u * from[0] + 2 * u * t * c[0] + t * t * to[0],
+      u * u * from[1] + 2 * u * t * c[1] + t * t * to[1],
+    );
+  }
+}
+
+function flattenCubic(
+  out: number[], from: [number, number],
+  c1: [number, number], c2: [number, number], to: [number, number],
+): void {
+  for (let i = 1; i <= CURVE_STEPS; i++) {
+    const t = i / CURVE_STEPS;
+    const u = 1 - t;
+    out.push(
+      u * u * u * from[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * to[0],
+      u * u * u * from[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * to[1],
+    );
+  }
+}
+
+/** Cardinal spline, retained for closed tensioned outlines. */
+function cardinalClosed(pts: readonly number[], tension: number): number[] {
   const n = pts.length / 2;
-  if (!tension || n < 3) return pts.slice();
   const at = (i: number): [number, number] => {
-    const j = closed ? (i + n) % n : Math.max(0, Math.min(n - 1, i));
+    const j = (i + n) % n;
     return [pts[j * 2], pts[j * 2 + 1]];
   };
   const out: number[] = [];
   const steps = 8;
-  const last = closed ? n : n - 1;
-  for (let i = 0; i < last; i++) {
+  for (let i = 0; i < n; i++) {
     const [x0, y0] = at(i - 1);
     const [x1, y1] = at(i);
     const [x2, y2] = at(i + 1);
@@ -269,7 +370,6 @@ export function tensionize(pts: readonly number[], tension: number, closed = fal
       const t2 = t * t;
       const t3 = t2 * t;
       const m = tension;
-      // Cardinal spline basis.
       const b0 = -m * t3 + 2 * m * t2 - m * t;
       const b1 = (2 - m) * t3 + (m - 3) * t2 + 1;
       const b2 = (m - 2) * t3 + (3 - 2 * m) * t2 + m * t;
@@ -277,7 +377,7 @@ export function tensionize(pts: readonly number[], tension: number, closed = fal
       out.push(x0 * b0 + x1 * b1 + x2 * b2 + x3 * b3, y0 * b0 + y1 * b1 + y2 * b2 + y3 * b3);
     }
   }
-  const [lx, ly] = at(closed ? 0 : n - 1);
+  const [lx, ly] = at(0);
   out.push(lx, ly);
   return out;
 }

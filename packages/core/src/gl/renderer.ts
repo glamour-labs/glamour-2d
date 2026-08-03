@@ -46,7 +46,19 @@ export interface ShadowPaint {
 export type Paint =
   | { kind: 'solid'; color: Rgba }
   | { kind: 'gradient'; gradient: GradientPaint }
-  | { kind: 'texture'; source: TexImageSource; x: number; y: number; w: number; h: number };
+  | {
+      kind: 'texture';
+      source: TexImageSource;
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      /** Rotation pivot in canvas pixels — the node's own origin. */
+      originX: number;
+      originY: number;
+      /** Rotation in degrees, matching the node's `rotation` prop. */
+      rot: number;
+    };
 
 const MAX_STOPS = 8;
 
@@ -109,15 +121,27 @@ void main() {
   o = vec4(c.rgb * a, a);
 }`;
 
+// Samples a bitmap (today: rasterized text) through the stencil mask.
+//
+// The mask is built from ROTATED geometry, so this must un-rotate the fragment
+// position before computing uv — otherwise the glyph is sampled axis-aligned and
+// then clipped by a rotated mask, which renders rotated text upright and
+// truncated. (Caught by conformance/text-and-stroke.glam.)
 const FS_TEXTURE = `#version 300 es
 precision highp float;
 in vec2 v_px;
 uniform sampler2D u_tex;
-uniform vec4 u_box;      // x, y, w, h in pixels
+uniform vec4 u_box;        // unrotated box: x, y, w, h in pixels
+uniform vec2 u_origin;     // rotation pivot (the node origin)
+uniform float u_rot;       // radians
 uniform float u_alpha;
 out vec4 o;
 void main() {
-  vec2 uv = (v_px - u_box.xy) / u_box.zw;
+  vec2 p = v_px - u_origin;
+  float c = cos(-u_rot);
+  float s = sin(-u_rot);
+  vec2 q = vec2(p.x * c - p.y * s, p.x * s + p.y * c) + u_origin;
+  vec2 uv = (q - u_box.xy) / u_box.zw;
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) { o = vec4(0.0); return; }
   vec4 t = texture(u_tex, uv);
   o = vec4(t.rgb * t.a * u_alpha, t.a * u_alpha);
@@ -149,16 +173,32 @@ void main() {
   o = acc / max(wsum, 1e-5);
 }`;
 
-// Tints a premultiplied silhouette to the shadow colour.
+// Tints a premultiplied silhouette to the shadow colour and composites it.
+//
+// Two corrections live here, and only here:
+//   1. Y FLIP. The vertex shader negates clip.y so a_pos is in canvas space
+//      (top-left origin). Render that into an FBO and the texture — which has a
+//      BOTTOM-left origin — stores the image upside down. Sampling with the same
+//      top-left convention double-flips it, which put every glow at `h - y`
+//      instead of `y`. The intermediate blur passes deliberately do NOT flip:
+//      they read and write the same storage space, and a Gaussian is
+//      positionally symmetric, so they are correct in storage coordinates.
+//   2. OFFSET. Sampling at (v_px - offset) shifts the shadow by +offset while
+//      the quad stays full-canvas. Offsetting the quad instead crops the
+//      texture rather than moving it.
 const FS_TINT = `#version 300 es
 precision highp float;
 in vec2 v_px;
 uniform sampler2D u_tex;
 uniform vec4 u_color;
 uniform vec2 u_res;
+uniform vec2 u_offset;
 out vec4 o;
 void main() {
-  float a = texture(u_tex, v_px / u_res).a * u_color.a;
+  vec2 src = v_px - u_offset;
+  vec2 uv = vec2(src.x / u_res.x, 1.0 - src.y / u_res.y);
+  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) { o = vec4(0.0); return; }
+  float a = texture(u_tex, uv).a * u_color.a;
   o = vec4(u_color.rgb * a, a);
 }`;
 
@@ -206,9 +246,9 @@ export class GlRenderer {
       ...Array.from({ length: MAX_STOPS }, (_, i) => `u_offsets[${i}]`),
       ...Array.from({ length: MAX_STOPS }, (_, i) => `u_colors[${i}]`),
     ]);
-    this.texture = this.program(VS_QUAD, FS_TEXTURE, ['u_res', 'u_tex', 'u_box', 'u_alpha']);
+    this.texture = this.program(VS_QUAD, FS_TEXTURE, ['u_res', 'u_tex', 'u_box', 'u_origin', 'u_rot', 'u_alpha']);
     this.blur = this.program(VS_QUAD, FS_BLUR, ['u_res', 'u_tex', 'u_texel', 'u_dir', 'u_radius']);
-    this.tint = this.program(VS_QUAD, FS_TINT, ['u_res', 'u_tex', 'u_color']);
+    this.tint = this.program(VS_QUAD, FS_TINT, ['u_res', 'u_tex', 'u_color', 'u_offset']);
 
     const vao = gl.createVertexArray();
     const buf = gl.createBuffer();
@@ -359,6 +399,8 @@ export class GlRenderer {
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.uniform1i(this.texture.u.u_tex!, 0);
       gl.uniform4f(this.texture.u.u_box!, paint.x, paint.y, paint.w, paint.h);
+      gl.uniform2f(this.texture.u.u_origin!, paint.originX, paint.originY);
+      gl.uniform1f(this.texture.u.u_rot!, (paint.rot * Math.PI) / 180);
       gl.uniform1f(this.texture.u.u_alpha!, alpha);
     });
   }
@@ -402,22 +444,18 @@ export class GlRenderer {
     pass(a.tex, b.fb, [1, 0]);
     pass(b.tex, a.fb, [0, 1]);
 
-    // Composite the tinted blur onto the canvas, offset.
+    // Composite the tinted blur. Full-canvas quad — the offset is applied as a
+    // sampling shift inside FS_TINT, not by moving the geometry.
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, W, H);
     gl.enable(gl.BLEND);
-    const offset = quadVerts({
-      x0: shadow.offsetX,
-      y0: shadow.offsetY,
-      x1: this.width + shadow.offsetX,
-      y1: this.height + shadow.offsetY,
-    });
-    this.rawDraw(this.tint, offset, () => {
+    this.rawDraw(this.tint, full, () => {
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, a.tex);
       gl.uniform1i(this.tint.u.u_tex!, 0);
       const c = shadow.color;
       gl.uniform4f(this.tint.u.u_color!, c.r, c.g, c.b, c.a);
+      gl.uniform2f(this.tint.u.u_offset!, shadow.offsetX, shadow.offsetY);
     });
   }
 

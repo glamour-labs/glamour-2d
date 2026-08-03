@@ -523,7 +523,7 @@ class SceneCore {
     const abs = node.getAbsolutePosition();
     const rot = num(node.props.rotation);
     const shadow = this.shadowFor(node);
-    const paint = this.paintFor(node, abs);
+    const paint = this.paintFor(node, abs, rot);
     if (paint) {
       r.drawNode((m) => this.buildGeometry(m, node, abs, rot), paint, alpha, shadow);
     }
@@ -638,7 +638,7 @@ class SceneCore {
     m.translateFrom(from, abs.x, abs.y);
   }
 
-  private paintFor(node: NodeHandle, abs: { x: number; y: number }): Paint | null {
+  private paintFor(node: NodeHandle, abs: { x: number; y: number }, rot = 0): Paint | null {
     if (node.kind === 'text') {
       const raster = node.textRaster(this.dpr);
       if (!raster) return null;
@@ -661,6 +661,10 @@ class SceneCore {
         y: abs.y - raster.padY,
         w: raster.w,
         h: raster.h,
+        // The stencil mask is rotated geometry, so the sampler has to rotate too.
+        originX: abs.x,
+        originY: abs.y,
+        rot,
       };
     }
 

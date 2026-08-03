@@ -1,0 +1,20 @@
+{
+  "schema": "glamour/v0.1",
+  "canvas": { "w": 420, "h": 260, "bg": "#ffffff" },
+  "nodes": [
+    { "id": "circlePlain", "type": "circle", "x": 60, "y": 60, "r": 38, "fill": "#4c7dff" },
+    { "id": "circleStroked", "type": "circle", "x": 160, "y": 60, "r": 38, "fill": "#ffffff", "stroke": "#d92b2b", "strokeWidth": 8 },
+    { "id": "ellipseWide", "type": "ellipse", "x": 270, "y": 60, "rx": 52, "ry": 28, "fill": "#5ad67d" },
+    { "id": "ellipseStroked", "type": "ellipse", "x": 370, "y": 60, "rx": 30, "ry": 44, "fill": "#fdeeb3", "stroke": "#b07d00", "strokeWidth": 6 },
+
+    { "id": "rectSharp", "type": "rect", "x": 22, "y": 130, "w": 76, "h": 56, "fill": "#8a63d2" },
+    { "id": "rectRounded", "type": "rect", "x": 120, "y": 130, "w": 76, "h": 56, "cornerRadius": 18, "fill": "#ff9f43" },
+    { "id": "rectRoundedStroked", "type": "rect", "x": 218, "y": 130, "w": 76, "h": 56, "cornerRadius": 26, "fill": "#ffffff", "stroke": "#1c9ff2", "strokeWidth": 7 },
+    { "id": "rectRotated", "type": "rect", "x": 340, "y": 132, "w": 64, "h": 48, "cornerRadius": 8, "fill": "#33cccc", "rotation": 18 },
+
+    { "id": "arcPie", "type": "arc", "x": 60, "y": 222, "innerRadius": 0, "outerRadius": 30, "angle": 250, "fill": "#d92b2b" },
+    { "id": "arcRing", "type": "arc", "x": 160, "y": 222, "innerRadius": 18, "outerRadius": 30, "angle": 300, "fill": "#2b52d4" },
+    { "id": "arcRingStroked", "type": "arc", "x": 262, "y": 222, "innerRadius": 14, "outerRadius": 30, "angle": 140, "fill": "#5ad67d", "stroke": "#1a5c2e", "strokeWidth": 4 },
+    { "id": "arcFull", "type": "arc", "x": 366, "y": 222, "innerRadius": 12, "outerRadius": 30, "angle": 360, "fill": "#ff9f43" }
+  ]
+}
