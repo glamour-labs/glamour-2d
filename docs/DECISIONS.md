@@ -171,7 +171,8 @@ Consequences that ripple outward:
 The full engineering account, including the four bugs the gates caught and the
 residual text-rasterizer difference, is in `docs/V2-RENDERER.md`.
 
-**Not yet done:** the global authoring install (`~/.local/bin/glam` and the
-`~/.claude/skills/cast-glamour` copy) still points at v1. See ROADMAP §"THE
-CUTOVER" — flipping it is a deliberate switch, because the wrapper can only point
-at one repo.
+**Cutover completed 2026-08-03.** `~/.local/bin/glam`, `~/.claude/skills/cast-glamour/`
+and `~/.claude/agents/glamour-smith.md` all point at v2; v1's README carries a
+RETIRED banner. v1 stays on disk and stays built — it is the pixel oracle for both
+parity gates, and a stale `dist/` there has already produced one wrong result. See
+ROADMAP §"CUTOVER DONE" for the verification and the re-copy caveat on the skill.

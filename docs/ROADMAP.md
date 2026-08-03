@@ -22,33 +22,30 @@ map; DECISIONS is the *why* of settled choices; BUILD-NOTES is the build/finding
 - **Proofs** in `sketches/`: progress-ring, toggle-switch, draw-letter-a (tap-through), flappy,
   crab-game, orb / Dolli, and **trace-letter** (Rung 2 — real interactive tracing).
 
-## ⚠️ THE CUTOVER — the global install still points at v1
-The globally-installed authoring path has NOT moved to v2, deliberately. Both pieces point at
-`~/Project/glamour` (v1):
+## ✅ CUTOVER DONE — v2 is the live engine (2026-08-03)
 
-- `~/.local/bin/glam` — a wrapper that hard-pins Node 20 and runs **v1's** built CLI.
-- `~/.claude/skills/cast-glamour/` — a **COPY**, not a symlink. Editing this repo's
-  `skills/cast-glamour/` does not change what an agent reads.
+The global authoring path now runs v2. All three artifacts were repointed:
 
-So today an AI authoring session validates and renders against **v1's engine**, whatever this repo
-says. Flipping those two is the cutover, and it is a real switch: it also means v1 authoring stops
-working, because the wrapper can only point at one repo.
+| Artifact | Now |
+|---|---|
+| `~/.local/bin/glam` | `node ~/Project/glamour-v2/packages/cli/dist/cli.js` — **no Node pin** |
+| `~/.claude/skills/cast-glamour/` | copied from this repo (it is a COPY, not a symlink — re-copy after editing) |
+| `~/.claude/agents/glamour-smith.md` | Node-20 block replaced by the Chromium prerequisite |
 
-To cut over:
+Verified from a neutral directory on **Node 24** (v1 cannot run there at all — it needs the Node-20
+`canvas` ABI): `glam new` / `validate` / `render` all pass, render takes ~1.4s via headless Chromium
+rather than being instant, and an `arc` + glow document — v2-only paint — validates and renders.
+
+Backup of the pre-cutover artifacts: `~/.glamour-cutover-backup-<timestamp>/`.
+
+**`~/Project/glamour` (v1) is RETIRED but must NOT be deleted, and must stay BUILT.** It is the pixel
+oracle for both parity gates. Its README carries the banner. A stale `dist/` there has already
+produced one wrong parity result — if the gates ever look suspiciously good or bad, rebuild v1 first.
+
+**After editing `skills/cast-glamour/` in this repo, re-copy it** or agents keep reading the old text:
 ```bash
-cd ~/Project/glamour-v2 && pnpm build
-cat > ~/.local/bin/glam <<'EOF'
-#!/usr/bin/env bash
-# Glamour CLI wrapper — v2 (WebGL renderer). No Node pin: v2 has no native `canvas`.
-# `render` needs Chromium: npx playwright install chromium
-exec node "$HOME/Project/glamour-v2/packages/cli/dist/cli.js" "$@"
-EOF
-chmod +x ~/.local/bin/glam
-rm -rf ~/.claude/skills/cast-glamour
-cp -R ~/Project/glamour-v2/skills/cast-glamour ~/.claude/skills/cast-glamour
+rm -rf ~/.claude/skills/cast-glamour && cp -R ~/Project/glamour-v2/skills/cast-glamour ~/.claude/skills/cast-glamour
 ```
-Then confirm: `glam render <any.glam> -o /tmp/x.png` produces a PNG, and the skill's §4 blockquote
-mentions Chromium rather than Node 20.
 
 ## The mission (why this exists)
 Glamour is the maintainer's **own tool to author complex interactions himself** — no designer, no
