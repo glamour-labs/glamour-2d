@@ -353,6 +353,18 @@ export class StageShim {
         if (type === 'pointerdown') {
           if (this.activePointerId !== null) return;
           this.activePointerId = pe.pointerId;
+          // Capture, or the owner can never be released. A MOUSE gets no
+          // implicit pointer capture: press inside the canvas, release outside,
+          // and no `pointerup` is ever delivered here — the owner id would be
+          // stranded and every later pointer discarded, leaving the canvas dead
+          // until reload. Dragging past the edge of a letter and letting go is
+          // the most ordinary thing a user does, so this is not an edge case.
+          try {
+            (canvas as HTMLCanvasElement).setPointerCapture?.(pe.pointerId);
+          } catch {
+            // Capture can be refused (a pointer already gone, a headless env).
+            // `lostpointercapture` below is the backstop either way.
+          }
         } else if (this.activePointerId !== null && pe.pointerId !== this.activePointerId) {
           return;
         }
@@ -367,6 +379,16 @@ export class StageShim {
       canvas.addEventListener(type, fn);
       this.detach.push(() => canvas.removeEventListener(type, fn));
     }
+    // The backstop. Fires whenever capture ends — including the ordinary
+    // implicit release after `pointerup`, where the id is already null, and the
+    // cases that would otherwise strand it (the element is removed, the browser
+    // revokes capture, capture was never granted and the pointer went away).
+    const onLost = (ev: Event): void => {
+      const pe = ev as PointerEvent;
+      if (pe.pointerId === this.activePointerId) this.activePointerId = null;
+    };
+    canvas.addEventListener('lostpointercapture', onLost);
+    this.detach.push(() => canvas.removeEventListener('lostpointercapture', onLost));
   }
 
   on(event: string, handler: PointerHandler): void {

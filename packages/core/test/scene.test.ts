@@ -171,3 +171,80 @@ test('buildScene seeds a wander target that is a plain node (not a group)', () =
   expect(scene.byId.orb.y()).toBe(70);
   scene.destroy();
 });
+
+// --- single-pointer discipline (StageShim) ----------------------------------
+// These drive REAL DOM PointerEvents on the canvas, deliberately: the player's
+// `__pointer` test hook bypasses StageShim entirely, so tests written against
+// it cannot see this layer at all. A previous version of the pointer guard had
+// no coverage for exactly that reason.
+function pointerScene() {
+  const mount = document.createElement('div');
+  document.body.appendChild(mount);
+  const scene = buildScene(
+    { schema: 'glamour/v0.1', canvas: { w: 100, h: 100 }, nodes: [] } as GlamDoc,
+    mount,
+  );
+  const seen: Array<string> = [];
+  for (const ev of ['pointerdown', 'pointermove', 'pointerup']) {
+    scene.stage.on(ev, () => seen.push(ev));
+  }
+  const canvas = mount.querySelector('canvas')!;
+  const fire = (type: string, pointerId: number) =>
+    canvas.dispatchEvent(new PointerEvent(type, { pointerId, bubbles: true, clientX: 10, clientY: 10 }));
+  return { scene, mount, canvas, seen, fire };
+}
+
+test('a drag follows one pointer: a second finger is ignored while the first owns it', () => {
+  const { scene, mount, seen, fire } = pointerScene();
+  fire('pointerdown', 1);
+  fire('pointermove', 1);
+  fire('pointerdown', 2);  // second finger lands
+  fire('pointermove', 2);
+  fire('pointerup', 2);    // and lifts — must not end finger 1's stroke
+  fire('pointermove', 1);
+  fire('pointerup', 1);
+  expect(seen).toEqual(['pointerdown', 'pointermove', 'pointermove', 'pointerup']);
+  scene.destroy();
+  mount.remove();
+});
+
+test('the owner lifting frees the canvas for the next pointer', () => {
+  const { scene, mount, seen, fire } = pointerScene();
+  fire('pointerdown', 1);
+  fire('pointerup', 1);
+  fire('pointerdown', 2);
+  fire('pointerup', 2);
+  expect(seen).toEqual(['pointerdown', 'pointerup', 'pointerdown', 'pointerup']);
+  scene.destroy();
+  mount.remove();
+});
+
+test('losing the pointer frees the canvas — a press released off-canvas must not kill it', () => {
+  // The regression this exists for: a mouse gets NO implicit pointer capture,
+  // so pressing inside the canvas and releasing outside delivers no pointerup
+  // at all. Without a release path the owner id is stranded and every later
+  // pointer is discarded — the canvas is dead until reload. Capture makes the
+  // up arrive; `lostpointercapture` is the backstop when it does not.
+  const { scene, mount, canvas, seen, fire } = pointerScene();
+  fire('pointerdown', 1);
+  seen.length = 0;
+  canvas.dispatchEvent(new PointerEvent('lostpointercapture', { pointerId: 1, bubbles: true }));
+  fire('pointerdown', 2); // a completely new interaction must work
+  fire('pointermove', 2);
+  fire('pointerup', 2);
+  expect(seen).toEqual(['pointerdown', 'pointermove', 'pointerup']);
+  scene.destroy();
+  mount.remove();
+});
+
+test('pointercancel releases the owner', () => {
+  const { scene, mount, canvas, seen, fire } = pointerScene();
+  fire('pointerdown', 1);
+  canvas.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1, bubbles: true }));
+  seen.length = 0;
+  fire('pointerdown', 2);
+  fire('pointerup', 2);
+  expect(seen).toEqual(['pointerdown', 'pointerup']);
+  scene.destroy();
+  mount.remove();
+});

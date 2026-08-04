@@ -229,7 +229,7 @@
       /* A landscape phone is short and WIDE. Stacking prompt / card / buttons
          cannot fit 320px of height at any card size a finger can trace, so stop
          stacking: put the card beside its controls and spend the width instead. */
-      @media (max-height: 460px) and (min-width: 480px) {
+      @media (max-height: 460px) and (min-width: 400px) {
         /* The title wraps the three segmented controls onto a second row, which
            costs ~37px of the ~320px available — more than the letter can spare.
            The pencil alone still identifies the page. */
@@ -237,7 +237,7 @@
         .brand h1::before { content: '✏️'; font-size: 17px; }
         /* Every remaining pixel of chrome comes out of the letter. */
         .app { gap: 5px; padding-top: 6px; }
-        .stage-card { padding: 5px 8px; gap: 5px; }
+        .stage-card { padding: 5px 8px; }
         .stage-card {
           display: grid;
           grid-template-columns: auto minmax(180px, 320px);
@@ -321,6 +321,9 @@
       const PASS = 0.6;
 
       const $ = (id) => document.getElementById(id);
+      /** Single source of truth — this string is also a media query in the CSS,
+       *  and the two silently diverging would misreport the available height. */
+      const LANDSCAPE_MQ = '(max-height: 460px) and (min-width: 400px)';
       const state = {
         theme: localStorage.getItem('alpha.theme') || 'paper',
         upper: (localStorage.getItem('alpha.case') || 'upper') === 'upper',
@@ -408,20 +411,24 @@
         // In the landscape layout the buttons sit BESIDE the card, not under
         // it, so reserving a stacked action row would shrink the letter for no
         // reason. Ask the layout which one is in force rather than assuming.
-        const sideBySide = window.matchMedia('(max-height: 460px) and (min-width: 480px)').matches;
+        const sideBySide = window.matchMedia(LANDSCAPE_MQ).matches;
         const roomBelow = sideBySide ? 26 : 108;
         const avail = window.innerHeight - top - roomBelow;
         const maxW = stage.parentElement.clientWidth - 28;
         const aspect = state.doc.canvas.w / state.doc.canvas.h;
-        // The floor is applied INSIDE the min, not outside it. Wrapping the
-        // whole expression in Math.max(230, …) let the floor override the very
-        // height budget this function just measured: on a 844x390 landscape
-        // phone it produced a card taller than the viewport, putting the
-        // letter's baseline and all three buttons below the fold — on an
-        // element carrying `touch-action: none`, so dragging could not scroll
-        // to them either. Below the floor the card would be too small to trace,
-        // so at that point the honest answer is to let the page scroll.
-        const w = Math.min(420, maxW, Math.max(196, avail * aspect));
+        // The floor goes INSIDE the min, not outside it. Wrapping the whole
+        // expression in Math.max(…) let the floor override the very height
+        // budget this function had just measured: on an 844x390 landscape phone
+        // it produced a card taller than the viewport, putting the letter's
+        // baseline and all three buttons below the fold — on an element
+        // carrying `touch-action: none`, so dragging could not scroll to them.
+        //
+        // Descender letters (`g j p q y`) are a whole band taller, so they set
+        // the constraint: 150 is what lets `j` fit a 568x320 landscape phone.
+        // Below roughly 500x320 the header alone eats the height and the letter
+        // is clipped; the action row still fits, and the page scrolls. No real
+        // device lands there — that is a resized window or a small webview.
+        const w = Math.min(420, maxW, Math.max(150, avail * aspect));
         stage.style.width = Math.floor(w) + 'px';
       }
       window.addEventListener('resize', fitStage);
@@ -533,7 +540,10 @@
           if (seq !== loadSeq) return;
           state.doc = null;
           $('stage').style.width = '';
-          $('stage').innerHTML = `<p style="padding:40px;color:#b00">Could not load ${url}<br><small>${e.message}</small></p>`;
+          const p = document.createElement('p');
+          p.style.cssText = 'padding:40px;color:#b00';
+          p.textContent = `Could not load ${url} — ${e.message}`;
+          $('stage').replaceChildren(p);
           return;
         }
         if (seq !== loadSeq) return; // a newer load already started; drop this one

@@ -86,6 +86,12 @@ function star(id, x, y, r, fill) {
  * Drop points that land on top of one that came before. A scoring target must
  * count each part of the letter once — where a path doubles back, the repeated
  * vertices weight that stretch twice and make a partial attempt look complete.
+ *
+ * Known consequence: collapsing a retrace leaves a straight gap between the
+ * surviving neighbours (up to ~270px on `p`), so the target has corridors where
+ * no vertex sits. Coverage is unaffected — it counts vertices, and all of them
+ * are still on the letter — but the `stray` term is blind inside a corridor.
+ * Measured across the corpus: no false negative, no new lazy-chord pass.
  */
 function dedupe(flat, minGap) {
   const out = [];
@@ -388,7 +394,7 @@ export function buildDoc({ letter, upper, mode, theme: themeId }) {
           // At 1.15×pen (59px in the card theme, 14% of the canvas) a single
           // straight swipe from the start dot to the end dot passed 14 of the 68
           // curved strokes in the corpus — a child drawing a line instead of a
-          // `u` was told they were right. 0.75×pen takes that to 2, and every
+          // `u` was told they were right. 0.75×pen takes that to 1, and every
           // careful trace still scores 1.00.
           tolerance: Math.max(20, Math.round(L.pen * 0.75)),
         },
