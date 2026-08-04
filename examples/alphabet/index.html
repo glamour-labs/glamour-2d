@@ -399,9 +399,14 @@
         if (state.theme === 'card') {
           for (let n = 1; n <= state.strokeCount; n++) p.set(`ink${n}`, 'stroke', '#58CC02');
         }
+        // The staggered burst outlives the frame it was scheduled in, and the
+        // child may well tap another letter mid-sparkle — which destroys this
+        // player. Address the node only while this player is still the live
+        // one; `state.player` is reassigned by load() on every letter change.
+        const alive = () => state.player === p;
         const sparks = sparkIds(doc);
-        sparks.forEach((id, i) => setTimeout(() => p.set(id, 'opacity', 1), i * 45));
-        setTimeout(() => sparks.forEach((id) => p.set(id, 'opacity', 0)), 1500);
+        sparks.forEach((id, i) => setTimeout(() => { if (alive()) p.set(id, 'opacity', 1); }, i * 45));
+        setTimeout(() => { if (alive()) sparks.forEach((id) => p.set(id, 'opacity', 0)); }, 1500);
 
         const done = loadDone();
         done.add(state.letter);
