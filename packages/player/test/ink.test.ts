@@ -206,3 +206,65 @@ test('a throwing onStroke listener does not break others', () => {
   fire('up', 10, 10);
   expect(reached).toBe(true);
 });
+
+// --- degenerate touches -----------------------------------------------------
+// The runtime advances one pen-stroke per pen-up and cannot hand one back, so
+// what it accepts as "a stroke" decides whether one stray touch costs the host
+// every stroke already drawn.
+const dotDoc: GlamDoc = {
+  schema: 'glamour/v0.1',
+  canvas: { w: 200, h: 200 },
+  nodes: [
+    { id: 'a', type: 'stroke', x: 0, y: 0, points: [], stroke: '#111', strokeWidth: 20 },
+    { id: 'b', type: 'stroke', x: 0, y: 0, points: [], stroke: '#111', strokeWidth: 20 },
+  ],
+  ink: {
+    strokes: [
+      { into: 'a', match: { target: [100, 40, 100, 90, 100, 140], tolerance: 26 } },
+      // A dot: the correct input is a stationary press, not a drag.
+      { into: 'b', match: { target: [100, 22, 100, 28], tolerance: 26 } },
+    ],
+    emit: 'strokeDone',
+  },
+};
+
+test('a stationary tap ON the stroke start counts - that is how a dot is drawn', () => {
+  player = renderGlamour(dotDoc, mount);
+  const strokes: GlamStrokeEvent[] = [];
+  player.onStroke((e) => strokes.push(e));
+  const fire = pointerForTest(player);
+  fire('down', 100, 40); fire('move', 100, 90); fire('move', 100, 140); fire('up', 100, 140);
+  fire('down', 100, 25); fire('up', 100, 25); // the dot, tapped
+  expect(strokes.length).toBe(2);
+  expect(strokes[1].done).toBe(true);
+  expect(strokes[1].match!.startOk).toBe(true);
+  expect(strokes[1].match!.score).toBeGreaterThanOrEqual(0.6);
+});
+
+test('a stationary tap far from the stroke start is ignored, not spent', () => {
+  player = renderGlamour(dotDoc, mount);
+  const strokes: GlamStrokeEvent[] = [];
+  player.onStroke((e) => strokes.push(e));
+  const fire = pointerForTest(player);
+  fire('down', 20, 190); fire('up', 20, 190); // a resting finger in the corner
+  expect(strokes.length).toBe(0);             // no event at all
+  expect(pointsForTest(player, 'a')).toEqual([]); // and no ink left behind
+  // ...and the stroke index did not move: stroke 1 is still stroke 1.
+  fire('down', 100, 40); fire('move', 100, 90); fire('move', 100, 140); fire('up', 100, 140);
+  expect(strokes.length).toBe(1);
+  expect(strokes[0].index).toBe(0);
+  expect(strokes[0].match!.startOk).toBe(true);
+});
+
+test('a short but MOVED stroke is still a real attempt, and is scored', () => {
+  // Only an unmoved sample is discarded. A deliberate small scribble in the
+  // wrong place must still be judged - silently swallowing it would be its own
+  // kind of lie.
+  player = renderGlamour(dotDoc, mount);
+  const strokes: GlamStrokeEvent[] = [];
+  player.onStroke((e) => strokes.push(e));
+  const fire = pointerForTest(player);
+  fire('down', 20, 190); fire('move', 26, 190); fire('up', 32, 190);
+  expect(strokes.length).toBe(1);
+  expect(strokes[0].match!.startOk).toBe(false);
+});

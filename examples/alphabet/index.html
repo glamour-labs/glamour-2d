@@ -203,6 +203,19 @@
         .rail-grid::-webkit-scrollbar-thumb { background: var(--line); border-radius: 99px; }
         .letter { flex: 0 0 42px; height: 42px; aspect-ratio: auto; scroll-snap-align: center; }
       }
+      /* Short viewports generally: the chrome costs more than it is worth when
+         there are only ~390px of height. */
+      @media (max-height: 560px) {
+        .app { padding: 8px 12px 16px; gap: 8px; }
+        header { gap: 6px; }
+        .brand h1 { font-size: 16px; }
+        .brand .sub { display: none; }
+        .prompt small { display: none; }
+        .prompt { font-size: 13px; min-height: 0; }
+        .stage-card { padding: 8px 10px; gap: 7px; }
+        .seg button { padding: 5px 10px; font-size: 12px; }
+        .btn { padding: 6px 12px; font-size: 12px; }
+      }
       @media (max-width: 640px) {
         .app { padding: 12px 12px 28px; gap: 12px; }
         header { gap: 8px; }
@@ -212,6 +225,29 @@
         .seg button { padding: 6px 11px; font-size: 12px; }
         .stage-card { padding: 12px 10px; }
         .btn { padding: 8px 14px; font-size: 12px; }
+      }
+      /* A landscape phone is short and WIDE. Stacking prompt / card / buttons
+         cannot fit 320px of height at any card size a finger can trace, so stop
+         stacking: put the card beside its controls and spend the width instead. */
+      @media (max-height: 460px) and (min-width: 480px) {
+        /* The title wraps the three segmented controls onto a second row, which
+           costs ~37px of the ~320px available — more than the letter can spare.
+           The pencil alone still identifies the page. */
+        .brand h1 { font-size: 0; }
+        .brand h1::before { content: '✏️'; font-size: 17px; }
+        /* Every remaining pixel of chrome comes out of the letter. */
+        .app { gap: 5px; padding-top: 6px; }
+        .stage-card { padding: 5px 8px; gap: 5px; }
+        .stage-card {
+          display: grid;
+          grid-template-columns: auto minmax(180px, 320px);
+          grid-template-areas: 'stage prompt' 'stage actions';
+          align-content: center; justify-content: center; justify-items: center;
+          gap: 10px 22px;
+        }
+        .stage-card .prompt { grid-area: prompt; align-self: end; }
+        .stage-card #stage { grid-area: stage; }
+        .stage-card .stage-actions { grid-area: actions; align-self: start; flex-wrap: wrap; justify-content: center; }
       }
     </style>
   </head>
@@ -369,11 +405,23 @@
         const stage = $('stage');
         stage.style.width = '';
         const top = stage.getBoundingClientRect().top;
-        const roomBelow = 108; // the action row + card padding
+        // In the landscape layout the buttons sit BESIDE the card, not under
+        // it, so reserving a stacked action row would shrink the letter for no
+        // reason. Ask the layout which one is in force rather than assuming.
+        const sideBySide = window.matchMedia('(max-height: 460px) and (min-width: 480px)').matches;
+        const roomBelow = sideBySide ? 26 : 108;
         const avail = window.innerHeight - top - roomBelow;
         const maxW = stage.parentElement.clientWidth - 28;
         const aspect = state.doc.canvas.w / state.doc.canvas.h;
-        const w = Math.max(230, Math.min(420, maxW, avail * aspect));
+        // The floor is applied INSIDE the min, not outside it. Wrapping the
+        // whole expression in Math.max(230, …) let the floor override the very
+        // height budget this function just measured: on a 844x390 landscape
+        // phone it produced a card taller than the viewport, putting the
+        // letter's baseline and all three buttons below the fold — on an
+        // element carrying `touch-action: none`, so dragging could not scroll
+        // to them either. Below the floor the card would be too small to trace,
+        // so at that point the honest answer is to let the page scroll.
+        const w = Math.min(420, maxW, Math.max(196, avail * aspect));
         stage.style.width = Math.floor(w) + 'px';
       }
       window.addEventListener('resize', fitStage);
@@ -442,7 +490,22 @@
         renderSteps();
       }
 
+      /**
+       * `load` is async, and the child can change letter faster than a fetch
+       * resolves — arrow-key auto-repeat does it trivially, and so does any
+       * phone-grade RTT. Two overlapping loads used to resolve in either order,
+       * leaving `state.letter` on one letter and the rendered canvas on
+       * another: trace the C on screen, and D gets the tick, the toast and the
+       * localStorage entry. Observed on plain localhost in 3 of 60 alternating
+       * navigations, with no injected latency.
+       *
+       * A generation token fixes it. Anything that resolves after a newer load
+       * has begun drops out before it can touch shared state or the DOM.
+       */
+      let loadSeq = 0;
+
       async function load() {
+        const seq = ++loadSeq;
         clearTimeout(state.advanceTimer);
         $('btnNext').classList.remove('pulse');
         if (state.player) { state.player.destroy(); state.player = null; }
@@ -456,12 +519,24 @@
         $('themeNote').textContent = THEMES[state.theme].note;
 
         let doc;
+        const url = docUrl();
         try {
-          doc = await (await fetch(docUrl())).json();
+          const res = await fetch(url);
+          // `res.ok` matters: a host that answers a missing file with a JSON
+          // error body parses fine and then explodes inside renderGlamour with
+          // an unhandled "cannot read properties of undefined", leaving a blank
+          // card and no message.
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          doc = await res.json();
+          if (!doc || !doc.canvas || !Array.isArray(doc.nodes)) throw new Error('not a glamour document');
         } catch (e) {
-          $('stage').innerHTML = `<p style="padding:40px;color:#b00">Could not load ${docUrl()}</p>`;
+          if (seq !== loadSeq) return;
+          state.doc = null;
+          $('stage').style.width = '';
+          $('stage').innerHTML = `<p style="padding:40px;color:#b00">Could not load ${url}<br><small>${e.message}</small></p>`;
           return;
         }
+        if (seq !== loadSeq) return; // a newer load already started; drop this one
         state.doc = doc;
         state.strokeCount = (doc.guided?.strokes || doc.ink?.strokes || [{}]).length;
         $('src').textContent = JSON.stringify(doc, null, 1);

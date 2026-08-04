@@ -223,6 +223,24 @@ export function renderGlamour(
       const line = scene.byId[s.into];
       if (!line) return;
       const points = [...(line.points() as number[])];
+      // A press that never moved AND never landed near where this stroke begins
+      // is not an attempt at it — it is a resting finger, a mis-tap, a dropped
+      // touch. Emitting it costs the host a pen-stroke it can never hand back,
+      // so one stray touch can throw away every stroke already drawn.
+      //
+      // Deliberately narrow. It needs a `match` (so the runtime knows where the
+      // stroke starts), it only fires for a single unmoved sample, and it keeps
+      // a tap that IS on the start — which is exactly how a dot is drawn, and
+      // the case a blunter "too short to be real" rule got wrong.
+      if (s.match && points.length <= 2) {
+        const dx = points[0] - s.match.target[0];
+        const dy = points[1] - s.match.target[1];
+        if (!(dx * dx + dy * dy <= s.match.tolerance * s.match.tolerance)) {
+          line.points([]);
+          scene.layer.draw();
+          return; // not a stroke: no event, and strokeIdx does not advance
+        }
+      }
       const match = s.match ? traceMatch(s.match.target, points, s.match.tolerance) : undefined;
       fireIsolated<GlamStrokeEvent>(strokeListeners, {
         event: s.emit ?? ink.emit,

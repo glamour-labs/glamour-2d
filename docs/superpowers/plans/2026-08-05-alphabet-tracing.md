@@ -88,6 +88,32 @@ That pass also proved, by mutation, that the B1 regression test was hollow — i
 path is one of the lengths where the old bug does not reproduce. Repointed at the real
 5.6px dot and re-verified by mutation (revert the clamp → red).
 
+**Third pass: GO** (one LOW finding — a `startsWith` containment check in the dev
+server that also admitted sibling directories; fixed with `relative`).
+
+**Adversarial pass on `index.html`** — run *after* that GO, because the host page had
+never been reviewed and two of the quest's worst defects had lived there. It found five
+more, all demonstrated live, all fixed:
+
+1. `load()` was async and re-entrant. Two overlapping loads resolved in either order and
+   left the canvas on one letter while state, prompt and rail said another — trace the C,
+   and D gets the tick. Reproduced 3 times in 60 alternating navigations on plain
+   localhost. Fixed with a generation token.
+2. A second finger anywhere on the card destroyed the stroke in progress — the pointer
+   stream merged every active touch. In free write a perfect stroke went 100% → 0%; in
+   guided it failed *silently*, leaving the puck stranded with no message at all. Fixed in
+   the runtime: one pointer owns a drag.
+3. A single straight swipe passed 14 of the 68 curved strokes, because tolerance was
+   1.15×pen (59px, 14% of the canvas). Now 1 of 82.
+4. Removing the stray-tap heuristic had left nothing at all in its place, so one
+   accidental tap discarded every stroke already drawn. Fixed in the runtime, where the
+   stroke is actually spent: an unmoved press that is not near the stroke's start is not
+   an attempt at it.
+5. `fitStage`'s `Math.max(230, …)` sat *outside* the min, overriding the height budget it
+   had just measured. In landscape the letter's baseline and all three buttons were below
+   the fold, on an element with `touch-action: none`. Now measured clean at eight
+   viewports, with a side-by-side layout for short ones.
+
 **Lessons worth keeping:**
 
 - A guard whose exceptions *are* the bug is worse than no guard, because it reads as
@@ -103,6 +129,14 @@ path is one of the lengths where the old bug does not reproduce. Repointed at th
 - Cost is a correctness concern for a guard: the sweep started at ~8 minutes and would
   have been deleted within a year. Stripping the scene down to what the projector reads
   took it to ~46s with the property unchanged.
+- A screenshot is not a responsive check. The 375px page scrolled sideways to 1309px and
+  looked perfect, because the overflow was off-screen. Only `scrollWidth` sees it.
+- Certification said GO; the adversarial pass then found five must-fixes in the one file
+  nothing tested. "Small blast radius" measured the diff, not the coverage. Where a
+  surface has no tests, the lens IS the coverage.
+- Both remaining scoring trade-offs were settled by measuring the corpus (172 strokes)
+  rather than arguing: tolerance at 0.75×pen, and the single `card/lower/b` residual left
+  in place because failing a child who *did* trace the letter is the worse error.
 
 ## Deliberately not done
 

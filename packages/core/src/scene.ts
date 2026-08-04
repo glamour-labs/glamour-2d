@@ -327,6 +327,8 @@ type PointerHandler = (evt: { type: string }) => void;
 /** Minimal stand-in for Konva.Stage — only what player.ts actually calls. */
 export class StageShim {
   private pointer: { x: number; y: number } | null = null;
+  /** The pointer that owns the current drag; others are ignored until it lifts. */
+  private activePointerId: number | null = null;
   private handlers = new Map<string, PointerHandler[]>();
   private detach: Array<() => void> = [];
 
@@ -339,11 +341,27 @@ export class StageShim {
     for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) {
       const fn = (ev: Event): void => {
         const pe = ev as PointerEvent;
+        // A drag follows ONE finger. Without this the stream is a merge of every
+        // active touch: on a tablet a second finger landing anywhere on the
+        // canvas emits a `down` that clears the in-progress ink and an `up` that
+        // finalises (and, for ink docs, spends) the stroke the first finger was
+        // still drawing. A child resting a palm loses the letter.
+        //
+        // The first pointer down owns the interaction until it lifts; the rest
+        // are dropped. Deliberately not palm-rejection — just single-pointer
+        // discipline, which is what a trace gesture actually is.
+        if (type === 'pointerdown') {
+          if (this.activePointerId !== null) return;
+          this.activePointerId = pe.pointerId;
+        } else if (this.activePointerId !== null && pe.pointerId !== this.activePointerId) {
+          return;
+        }
         const rect = canvas.getBoundingClientRect();
         const sx = rect.width > 0 ? this.w / rect.width : 1;
         const sy = rect.height > 0 ? this.h / rect.height : 1;
         this.pointer = { x: (pe.clientX - rect.left) * sx, y: (pe.clientY - rect.top) * sy };
         const key = type === 'pointercancel' ? 'pointerup' : type;
+        if (key === 'pointerup') this.activePointerId = null;
         for (const handler of this.handlers.get(key) ?? []) handler({ type: key });
       };
       canvas.addEventListener(type, fn);

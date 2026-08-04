@@ -82,6 +82,31 @@ function star(id, x, y, r, fill) {
   return { id, type: 'stroke', x: 0, y: 0, points: pts, closed: true, fill, tension: 0.1, opacity: 0 };
 }
 
+/**
+ * Drop points that land on top of one that came before. A scoring target must
+ * count each part of the letter once — where a path doubles back, the repeated
+ * vertices weight that stretch twice and make a partial attempt look complete.
+ */
+function dedupe(flat, minGap) {
+  const out = [];
+  const g2 = minGap * minGap;
+  for (let i = 0; i < flat.length; i += 2) {
+    const x = flat[i];
+    const y = flat[i + 1];
+    let seen = false;
+    for (let k = 0; k < out.length; k += 2) {
+      const dx = out[k] - x;
+      const dy = out[k + 1] - y;
+      if (dx * dx + dy * dy < g2) { seen = true; break; }
+    }
+    if (!seen) out.push(x, y);
+  }
+  // Never collapse a target out of existence. The `i`/`j` dot is a deliberate
+  // 5.6px stroke — shorter than the gap that catches a retrace — and reducing
+  // it to a single point makes the document invalid.
+  return out.length >= 4 ? out : flat;
+}
+
 /** Point and tangent at fraction `t` along a flat polyline. */
 function atFraction(flat, t) {
   const total = pathLength(flat);
@@ -351,10 +376,21 @@ export function buildDoc({ letter, upper, mode, theme: themeId }) {
       strokes: strokes.map((s, i) => ({
         into: `ink${i + 1}`,
         match: {
-          // Score against the visible outline, not the pen motion — a retrace
-          // would double the points along the stem and skew coverage.
-          target: resample(s.shape, 8),
-          tolerance: Math.max(26, Math.round(L.pen * 1.15)),
+          // Score against the visible outline, not the pen motion. Filtering the
+          // retrace SEGMENTS is not enough on its own: the polyline still bridges
+          // the gap they left, re-walking the stem, so `b`'s target counted its
+          // stem twice and a child who drew only the stem scored 0.64 — a pass.
+          // Collapsing coincident points makes each part of the letter count once.
+          // Gap 6 against an 8px resample: catches a doubled-back pass without
+          // touching legitimately-consecutive points.
+          target: dedupe(resample(s.shape, 8), 6),
+          // Tolerance is how far off the line a point may sit and still count.
+          // At 1.15×pen (59px in the card theme, 14% of the canvas) a single
+          // straight swipe from the start dot to the end dot passed 14 of the 68
+          // curved strokes in the corpus — a child drawing a line instead of a
+          // `u` was told they were right. 0.75×pen takes that to 2, and every
+          // careful trace still scores 1.00.
+          tolerance: Math.max(20, Math.round(L.pen * 0.75)),
         },
       })),
       emit: 'strokeDone',

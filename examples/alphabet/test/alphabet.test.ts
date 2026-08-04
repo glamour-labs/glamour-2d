@@ -183,6 +183,52 @@ describe('generated documents', () => {
     expect(falsePositives).toEqual([]);
   });
 
+
+  it('does not let a lazy straight swipe win a curved letter', () => {
+    // The negative case that bites. A far-away scribble fails `startOk` for
+    // every target in the corpus, so it can never detect the failure that
+    // actually matters: a single straight chord from the start dot to the end
+    // dot, which DOES start in the right place. At the original 1.15x-pen
+    // tolerance that swipe passed 14 of the 68 curved strokes — a child who
+    // drew a line instead of a `u` was told they were right.
+    const PASS = 0.6;
+    const arcLen = (t: number[]) => {
+      let d = 0;
+      for (let k = 2; k < t.length; k += 2) d += Math.hypot(t[k] - t[k - 2], t[k + 1] - t[k - 1]);
+      return d;
+    };
+    const cheated: string[] = [];
+    let curved = 0;
+    for (const c of combos.filter((x) => x.mode === 'hard')) {
+      const doc = buildDoc({ letter: c.letter, upper: c.upper, mode: c.mode, theme: c.theme }) as GlamDoc;
+      doc.ink!.strokes!.forEach((s, i) => {
+        const t = s.match!.target;
+        const chordLen = Math.hypot(t[t.length - 2] - t[0], t[t.length - 1] - t[1]);
+        // Only curved strokes: on a straight stroke the chord IS the letter.
+        if (!(chordLen > 1 && arcLen(t) / chordLen > 1.15)) return;
+        curved++;
+        const swipe: number[] = [];
+        for (let k = 0; k <= 40; k++) {
+          swipe.push(t[0] + ((t[t.length - 2] - t[0]) * k) / 40, t[1] + ((t[t.length - 1] - t[1]) * k) / 40);
+        }
+        const r = traceMatch(t, swipe, s.match!.tolerance);
+        if (r.score >= PASS && r.startOk) {
+          cheated.push(`${c.theme}/${c.caseKey}/${c.letter} stroke ${i + 1}: ${r.score.toFixed(2)}`);
+        }
+      });
+    }
+    expect(curved).toBeGreaterThan(60); // the sample is real, not an empty set
+
+    // One known residual, pinned rather than hidden: lowercase `b` in the card
+    // theme. Its single pen-stroke is stem-then-bowl, so the stem alone is 57%
+    // of the target and a stem-only swipe lands at 0.62 against a 0.60 gate.
+    // Tightening tolerance enough to fail it leaves a real child ~5px of slack
+    // inside a 51px channel, and wrongly failing a child who DID trace the
+    // letter is the worse error. Raise this only alongside evidence from real
+    // use; if the list grows beyond this one entry, something regressed.
+    expect(cheated).toEqual(['card/lower/B stroke 1: 0.62']);
+  });
+
   it('has the committed .glam files in sync with the generator', () => {
     // The playground fetches the files on disk, not the generator, so a stale
     // checkout would ship letters that no longer match the source of truth.
