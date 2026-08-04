@@ -1,0 +1,113 @@
+# Alphabet tracing — the whole alphabet as a game
+
+**Status:** built · under certification · branch `claude/alphabet-tracing-game-293174`
+**Date:** 2026-08-05
+
+## The ask
+
+Research real alphabet tracing worksheets, pick the most suitable, and build the full
+26-letter tracing game — both cases, both difficulties. Use the existing `h` and `y`
+sketches as the knowledge of *how* the interaction works, but restyle everything
+(including `h` and `y`) to the researched UI. Multiple approaches welcome. Show both
+chosen worksheets and a playground covering all of them.
+
+## Shape
+
+One glyph dataset, many documents.
+
+```
+src/glyphs.mjs   52 hand-authored skeletons in band units (y: 0 ceiling, 1 midline,
+                 2 baseline, 3 descender). The source of truth for shape AND stroke order.
+src/themes.mjs   the two aesthetics as data. Same geometry, different pen:
+                 0.14 × x-height (paper) vs 0.34 × (card).
+src/build.mjs    glyph × theme × mode -> one .glam
+build.mjs        208 documents, each validated on write
+```
+
+EASY emits a `guided` block (the player owns the drag); HARD emits `ink` + a per-stroke
+`match` target (the host owns the verdict). That is a capability difference, not a
+tuned difficulty number.
+
+## Research
+
+Two read-only agents ran in parallel before any code:
+
+- **Stroke order** → `docs/ALPHABET-STROKE-ORDER.md`. Cross-checked Zaner-Bloser (chart
+  text *and* the numbered-arrow diagrams), Handwriting Without Tears, D'Nealian,
+  Fountas & Pinnell, and seven UK schemes. Caught five glyphs the first pass had wrong:
+  `B` and `G` were over-split, `J` was missing its top bar, `b` and `p` needed their
+  retrace. Also surfaced that ZB's own PDF has a typo (lowercase `f`'s text block
+  duplicates capital `F`'s) and that numbered arrows ≠ pen lifts.
+- **Worksheet visual design** → `docs/ALPHABET-WORKSHEET-STYLES.md`. Two aesthetics with
+  sources, palettes and measurements.
+
+## The design loop
+
+`tools/specimen.mjs` renders all 52 glyphs colour-coded per pen-stroke with a dot at each
+stroke's start; `tools/sheet.mjs` renders all 26 finished cards for one combination. Both
+were rendered and *looked at* repeatedly — that loop, not the code, is where the
+letterforms came from. Roughly a dozen shape corrections came out of it (round capitals
+too narrow, `B`'s bottom bowl, `M`'s vertex, `S` vertically short, `k`'s arm not meeting
+its stem, `f`'s counter closing at the fat pen weight, the `i`/`j` dot clearance).
+
+## Verification
+
+| Check | Result |
+|---|---|
+| `node build.mjs --check` | 208/208 valid and in sync |
+| `vitest --project node` | 179 pass (20 files) |
+| `vitest --project browser` | 102 pass (14 files) |
+| All 208 documents fetched over HTTP | 200, parse, correct block, correct schema |
+| Contact sheets rendered and inspected | 8 of 8 (2 themes × 2 cases × 2 modes) |
+| Guided drag driven in a real browser | full path, wobbled path, wrong-way, half-go |
+| Free-write scoring | careful trace passes; scribble scores 10% and is rejected |
+
+## Certification
+
+**First pass: NO-SHIP.** Three blocking defects, all real:
+
+1. **`i` and `j` were unwinnable in guided mode** — and the root cause was in the
+   runtime, not the letters. `gProject` samples a forward window of `52 / pathLength`;
+   when a path is shorter than 52px that ratio exceeds 1 and the sample grid steps over
+   the end without ever evaluating `t = 1`. Progress saturated at 0.71, below both
+   completion gates. Fixed in `packages/player/src/player.ts` by clamping.
+2. **The test that claimed to guard it was written so it could not fail** — it asserted
+   a minimum path length and then exempted `i` and `j`, the only two violations, by name.
+   Replaced with a sweep that drives all 104 guided documents through the real player.
+3. **Lowercase `u` was the wrong shape** — its right side never returned to the midline.
+
+Plus ten non-blocking findings, all addressed.
+
+**Second pass: NO-SHIP again**, on a defect the *fixes* introduced. The stray-tap guard
+rejected any stroke inking under 14px — which is exactly how the dot on an `i` is drawn
+(its target is 5.6px), so `i` and `j` became uncompletable in free-write mode. Removed:
+the scorer already separates a stray tap from a tap on the dot, and a failed stroke
+restarts the letter, so the heuristic was solving a problem the verdict path handles.
+
+That pass also proved, by mutation, that the B1 regression test was hollow — its 6.0px
+path is one of the lengths where the old bug does not reproduce. Repointed at the real
+5.6px dot and re-verified by mutation (revert the clamp → red).
+
+**Lessons worth keeping:**
+
+- A guard whose exceptions *are* the bug is worse than no guard, because it reads as
+  coverage. The exemption should have been the moment to ask why those two were special.
+- The degenerate end of a distribution deserves a test of its own. Every letter was
+  driven except the two shortest paths in the corpus.
+- Cross-checking `u` against `U` in the same file found the shape bug instantly. Internal
+  consistency is a cheap oracle.
+- A regression test must be shown to fail against the unfixed code. Two of them here did
+  not, for two different reasons, and both looked fine.
+- Fixing a cosmetic finding introduced the worst defect of the quest. Low-severity work
+  deserves the same "what does this reject?" question as the high-severity kind.
+- Cost is a correctness concern for a guard: the sweep started at ~8 minutes and would
+  have been deleted within a year. Stripping the scene down to what the projector reads
+  took it to ~46s with the property unchanged.
+
+## Deliberately not done
+
+- No picture/word cue ("A is for Apple") — needs 26 pieces of art to be worth having.
+- No UK letterform variants. UK `y` and `f` need different *geometry*, not a different
+  stroke order, so it is a feature rather than a flag. The glyph data is a plain table;
+  a second table is the shape that change would take.
+- No cursive.

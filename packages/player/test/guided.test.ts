@@ -109,12 +109,18 @@ const tinyDoc: GlamDoc = {
     { id: 'ink', type: 'stroke', x: 0, y: 0, points: [], stroke: '#1a1a1a', strokeWidth: 22 },
     { id: 'handle', type: 'circle', x: 100, y: 98, r: 14, fill: '#2e9e5b' },
   ],
-  guided: { strokes: [{ path: [100, 98, 100, 104], into: 'ink', handle: 'handle' }], emit: 'dotted' },
+  // 5.6px — the ACTUAL length of the dot on a lowercase `i` at worksheet pen
+  // weight. The length matters: the old sample grid stepped in `2/total`, so it
+  // happened to land exactly on t=1 whenever `total` was an even divisor — 6.0px
+  // passed under the bug. Picking a round number here would make this test green
+  // against the unfixed code, which is precisely how the first version of this
+  // guard was hollow. Verified by mutation: revert the clamp and this goes red.
+  guided: { strokes: [{ path: [100, 98, 100, 103.6], into: 'ink', handle: 'handle' }], emit: 'dotted' },
 };
 
 test('a guided path shorter than the 52px projection window still completes', () => {
   h = createHarness(tinyDoc);
-  h.stroke(dense([[100, 98], [100, 104]], 2));
+  h.stroke(dense([[100, 98], [100, 103.6]], 2));
   const last = h.guided[h.guided.length - 1];
   expect(last.done).toBe(true);
   expect(last.progress).toBe(1);

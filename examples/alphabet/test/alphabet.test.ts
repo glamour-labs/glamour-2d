@@ -97,10 +97,18 @@ describe('generated documents', () => {
       const doc = buildDoc({ letter: c.letter, upper: c.upper, mode: c.mode, theme: c.theme }) as GlamDoc;
       const label = `${c.theme}/${c.caseKey}/${c.letter}-${c.mode}`;
       const strokeNodes = new Set(doc.nodes.filter((n) => n.type === 'stroke').map((n) => n.id));
+      const allNodes = new Set(doc.nodes.map((n) => n.id));
       const list = c.mode === 'easy' ? doc.guided!.strokes : doc.ink!.strokes!;
-      list.forEach((s: { into: string }, i: number) => {
+      list.forEach((s: { into: string; handle?: string; arrow?: string }, i: number) => {
         expect(s.into, label).toBe(`ink${i + 1}`);
         expect(strokeNodes.has(s.into), `${label} → ${s.into}`).toBe(true);
+        // The browser sweep hands the harness a stripped document (guided block
+        // + only the nodes it names), so the claim that those ids resolve
+        // against the FULL card is asserted here instead — cheaply, and where
+        // the whole node list is already in hand.
+        for (const ref of [s.handle, s.arrow]) {
+          if (ref != null) expect(allNodes.has(ref), `${label} → ${ref}`).toBe(true);
+        }
       });
     }
   });

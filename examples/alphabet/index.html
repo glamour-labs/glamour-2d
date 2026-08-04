@@ -288,6 +288,7 @@
         strokeCount: 1,
         current: 0,
         finished: false,
+        restarting: false,
         advanceTimer: null,
       };
 
@@ -442,6 +443,7 @@
         $('meter').innerHTML = '';
         state.current = 0;
         state.finished = false;
+        state.restarting = false;
 
         document.documentElement.dataset.theme = state.theme;
         $('themeNote').textContent = THEMES[state.theme].note;
@@ -475,21 +477,15 @@
           });
         } else {
           p.onStroke((e) => {
-            // A resting finger or a stray tap still counts as a pen-up, and the
-            // runtime finalises and advances the stroke index on every pen-up —
-            // there is no handing it back. So catch the degenerate case here and
-            // restart the letter, rather than let a dropped touch silently cost
-            // a stroke the child then cannot re-attempt.
-            let inked = 0;
-            for (let k = 2; k < e.points.length; k += 2) {
-              inked += Math.hypot(e.points[k] - e.points[k - 2], e.points[k + 1] - e.points[k - 1]);
-            }
-            if (inked < 14) {
-              toast('Oops — let\u2019s start that one again');
-              clearTimeout(state.advanceTimer);
-              state.advanceTimer = setTimeout(() => load(), 900);
-              return;
-            }
+            if (state.restarting) return; // a reload is already queued
+            // Note there is deliberately NO ink-length test here. An earlier
+            // version rejected any stroke shorter than 14px as a stray tap —
+            // which is exactly how you draw the dot on an `i`, whose target is
+            // 5.6px, so `i` and `j` became uncompletable in this mode. The
+            // scorer already separates a stray tap (scores ~0, wrong start)
+            // from a tap on the dot (scores 1), and a failed stroke restarts
+            // the letter below. The heuristic was solving a problem the
+            // verdict path already handles.
             const m = e.match;
             if (m) {
               $('meter').innerHTML =
@@ -508,7 +504,10 @@
               // one back, so a missed stroke 1 of a 4-stroke letter already
               // decided the outcome — making the child draw the other three
               // first is three strokes of busywork with a known ending.
-              clearTimeout(state.advanceTimer);
+              //
+              // `restarting` latches: without it a child who keeps drawing
+              // pushes the reload back on every pen-up and it never fires.
+              state.restarting = true;
               toast('Good try — let’s do that one again');
               state.advanceTimer = setTimeout(() => load(), 1400);
               return;
