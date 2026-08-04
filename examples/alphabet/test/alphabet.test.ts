@@ -212,9 +212,7 @@ describe('generated documents', () => {
           swipe.push(t[0] + ((t[t.length - 2] - t[0]) * k) / 40, t[1] + ((t[t.length - 1] - t[1]) * k) / 40);
         }
         const r = traceMatch(t, swipe, s.match!.tolerance);
-        if (r.score >= PASS && r.startOk) {
-          cheated.push(`${c.theme}/${c.caseKey}/${c.letter} stroke ${i + 1}: ${r.score.toFixed(2)}`);
-        }
+        if (r.score >= PASS && r.startOk) cheated.push(`${c.theme}/${c.caseKey}/${c.letter} stroke ${i + 1}`);
       });
     }
     expect(curved).toBeGreaterThan(60); // the sample is real, not an empty set
@@ -226,7 +224,10 @@ describe('generated documents', () => {
     // inside a 51px channel, and wrongly failing a child who DID trace the
     // letter is the worse error. Raise this only alongside evidence from real
     // use; if the list grows beyond this one entry, something regressed.
-    expect(cheated).toEqual(['card/lower/B stroke 1: 0.62']);
+    // Pinned by identity, not by score: asserting the exact 0.62 would go red on
+    // any harmless tolerance or geometry tweak and teach the next person to
+    // update the number rather than ask why it moved.
+    expect(cheated).toEqual(['card/lower/B stroke 1']);
   });
 
   it('has the committed .glam files in sync with the generator', () => {
