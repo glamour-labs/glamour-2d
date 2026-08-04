@@ -179,6 +179,10 @@ follows whichever pointer draws rather than either down-order.
   patches.
 - Mutation-check each half of a rule separately. Removing one half of the ownership rule
   left every test green, which is how a load-bearing branch turned out to be uncovered.
+  (A later pass corrected one of my own mutation claims: removing *only* the coverage half
+  of the accident guard reddens one test, not three — three need the whole guard neutered.
+  Both halves are independently load-bearing, which is the property that matters, but the
+  claim as written named the wrong mutation.)
 
 ## Deliberately not done
 

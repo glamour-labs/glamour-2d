@@ -346,15 +346,20 @@ export class StageShim {
     for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) {
       const fn = (ev: Event): void => {
         const pe = ev as PointerEvent;
-        // A drag follows ONE finger. Without this the stream is a merge of every
-        // active touch: on a tablet a second finger landing anywhere on the
-        // canvas emits a `down` that clears the in-progress ink and an `up` that
-        // finalises (and, for ink docs, spends) the stroke the first finger was
-        // still drawing. A child resting a palm loses the letter.
+        // A drag follows ONE pointer. Without this the stream is a merge of
+        // every active touch: on a tablet a second finger landing anywhere on
+        // the canvas emits a `down` that clears the in-progress ink and an `up`
+        // that finalises (and, for ink docs, spends) the stroke the first finger
+        // was still drawing. A child resting a palm loses the letter.
         //
-        // The first pointer down owns the interaction until it lifts; the rest
-        // are dropped. Deliberately not palm-rejection — just single-pointer
-        // discipline, which is what a trace gesture actually is.
+        // Forget a pointer the moment it lifts — BEFORE the not-the-owner reject
+        // below, which used to return first and so only ever cleaned up after
+        // the owner. Two bugs came out of that: `downAt` grew without bound, and
+        // a stale entry meant a merely HOVERING pen or mouse (down earlier as a
+        // non-owner, never cleared) could satisfy the movement-steal and take the
+        // drag away from a finger that was really drawing — handing the host a
+        // synthetic `pointerdown` at a stale origin the user never touched.
+        if (type === 'pointerup' || type === 'pointercancel') this.downAt.delete(pe.pointerId);
         if (type === 'pointerdown') {
           // Ownership is decided by which pointer DRAWS, not by which lands
           // first. "First down wins" broke palm-lands-first; "last down wins
@@ -393,10 +398,7 @@ export class StageShim {
         }
         this.pointer = this.toStage(canvas, pe.clientX, pe.clientY);
         const key = type === 'pointercancel' ? 'pointerup' : type;
-        if (key === 'pointerup') {
-          this.downAt.delete(pe.pointerId);
-          if (pe.pointerId === this.activePointerId) this.releaseActive();
-        }
+        if (key === 'pointerup' && pe.pointerId === this.activePointerId) this.releaseActive();
         for (const handler of this.handlers.get(key) ?? []) handler({ type: key });
       };
       canvas.addEventListener(type, fn);

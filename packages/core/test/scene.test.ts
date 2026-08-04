@@ -245,6 +245,29 @@ test('a palm that lands SECOND, before the finger moves, does not steal the drag
   mount.remove();
 });
 
+test('a lifted pointer is forgotten, so a hovering one cannot steal the drag', () => {
+  // `downAt` used to be cleaned only for the owner, because the delete sat after
+  // the not-the-owner reject. So a pen or mouse that had been down earlier as a
+  // non-owner kept its entry forever, and a later HOVER move — no button, no
+  // contact — satisfied the movement-steal and took the drag from a finger that
+  // was actually drawing, restarting the host's stroke at a stale origin.
+  const { scene, mount, seen, fire } = pointerScene();
+  fire('pointerdown', 2, 80, 80);   // a pen touches down as a non-owner...
+  fire('pointerdown', 1, 10, 10);
+  fire('pointermove', 1, 40, 40);   // ...finger 1 takes the drag by drawing
+  fire('pointerup', 2, 80, 80);     // ...and the pen lifts
+  fire('pointerup', 1, 40, 40);     // ...then the finger finishes its stroke
+  seen.length = 0;
+  fire('pointerdown', 3, 12, 12);   // a fresh gesture by another finger
+  fire('pointermove', 2, 200, 200); // the lifted pen merely HOVERS across
+  fire('pointermove', 3, 30, 30);
+  fire('pointerup', 3, 30, 30);
+  // Only finger 3's own events; the hover contributed nothing.
+  expect(seen).toEqual(['pointerdown', 'pointermove', 'pointerup']);
+  scene.destroy();
+  mount.remove();
+});
+
 test('a tap lands even while another pointer is resting on the canvas', () => {
   // A palm resting and the child TAPPING a dot with a finger. The steal rule
   // cannot help here — a tap never moves — so this is carried by the down path
