@@ -226,7 +226,8 @@
           <div class="rail-grid" id="rail"></div>
           <div class="progress-wrap">
             <div class="bar"><i id="barFill"></i></div>
-            <div class="progress-label"><span id="progText">0 of 26</span><button class="btn" id="resetAll" style="padding:2px 9px;font-size:10px">clear</button></div>
+            <div class="progress-label"><span id="progText">0 of 26</span><button class="btn" id="resetAll" style="padding:2px 9px;font-size:10px"
+                title="Clears progress for this worksheet + case + difficulty only">clear</button></div>
           </div>
         </aside>
 
@@ -309,12 +310,12 @@
 
       function renderSegs() {
         buildSeg($('themeSeg'), Object.entries(THEMES).map(([k, v]) => [k, v.label]),
-          () => state.theme, (v) => { state.theme = v; localStorage.setItem('alpha.theme', v); reload(true); });
+          () => state.theme, (v) => { state.theme = v; localStorage.setItem('alpha.theme', v); reload(); });
         buildSeg($('caseSeg'), [['upper', 'ABC'], ['lower', 'abc']],
           () => (state.upper ? 'upper' : 'lower'),
-          (v) => { state.upper = v === 'upper'; localStorage.setItem('alpha.case', v); reload(true); });
+          (v) => { state.upper = v === 'upper'; localStorage.setItem('alpha.case', v); reload(); });
         buildSeg($('modeSeg'), Object.entries(MODES).map(([k, v]) => [k, v.label]),
-          () => state.mode, (v) => { state.mode = v; localStorage.setItem('alpha.mode', v); reload(true); });
+          () => state.mode, (v) => { state.mode = v; localStorage.setItem('alpha.mode', v); reload(); });
       }
 
       function renderRail() {
@@ -473,8 +474,22 @@
             else celebrate();
           });
         } else {
-          let allPassed = true;
           p.onStroke((e) => {
+            // A resting finger or a stray tap still counts as a pen-up, and the
+            // runtime finalises and advances the stroke index on every pen-up —
+            // there is no handing it back. So catch the degenerate case here and
+            // restart the letter, rather than let a dropped touch silently cost
+            // a stroke the child then cannot re-attempt.
+            let inked = 0;
+            for (let k = 2; k < e.points.length; k += 2) {
+              inked += Math.hypot(e.points[k] - e.points[k - 2], e.points[k + 1] - e.points[k - 1]);
+            }
+            if (inked < 14) {
+              toast('Oops — let\u2019s start that one again');
+              clearTimeout(state.advanceTimer);
+              state.advanceTimer = setTimeout(() => load(), 900);
+              return;
+            }
             const m = e.match;
             if (m) {
               $('meter').innerHTML =
@@ -486,27 +501,28 @@
             const ok = !m || (m.score >= PASS && m.startOk);
             const v = $('verdict');
             v.className = 'verdict ' + (ok ? 'pass' : 'retry');
-            v.textContent = ok ? '✓ Good stroke' : '↺ Try that stroke again';
-            const idx = e.index ?? 0;
-            if (idx === 0) allPassed = true;
-            allPassed = allPassed && ok;
-            if (!e.done) advanceGuides(idx);
-            else if (allPassed) celebrate();
-            else {
-              // The runtime advances one pen-stroke per pen-up, so a stroke
-              // cannot be re-attempted in place. Rather than leave the child
-              // stuck on a letter that can no longer pass, reset it for them.
-              state.current = state.strokeCount;
-              renderSteps();
+            v.textContent = ok ? '✓ Good stroke' : '↺ Not quite — let’s try again';
+            if (!ok) {
+              // Restart on the FIRST bad stroke, not at the end of the letter.
+              // The runtime spends a pen-stroke on every pen-up and cannot hand
+              // one back, so a missed stroke 1 of a 4-stroke letter already
+              // decided the outcome — making the child draw the other three
+              // first is three strokes of busywork with a known ending.
+              clearTimeout(state.advanceTimer);
               toast('Good try — let’s do that one again');
-              state.advanceTimer = setTimeout(() => load(), 1500);
+              state.advanceTimer = setTimeout(() => load(), 1400);
+              return;
             }
+            if (!e.done) advanceGuides(e.index ?? 0);
+            else celebrate();
           });
         }
       }
 
-      function reload(keepLetter) {
-        if (!keepLetter) state.letter = 'A';
+      /** Re-render the chrome and reload the card after a theme/case/mode change.
+       *  The letter is deliberately kept — switching worksheet mid-letter should
+       *  show you the same letter in the other style, not send you back to A. */
+      function reload() {
         renderSegs();
         renderRail();
         load();

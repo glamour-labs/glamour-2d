@@ -96,3 +96,41 @@ test('multi-stroke: strokes complete in order (index 0 then 1), and accumulate',
   expect(h.node('a')!.points!.length).toBeGreaterThan(2);
   expect(h.node('b')!.points!.length).toBeGreaterThan(2); // stroke 0 not erased
 });
+
+// A path SHORTER than the projector's own 52px forward window. This is the
+// degenerate end of the length distribution — the dot on a lowercase `i` is a
+// ~6px stroke — and it used to be unfinishable: `win = 52/total` exceeded 1,
+// so the sample grid stepped straight over the end (0, 0.36, 0.71, break) and
+// progress saturated below every completion gate. Regression guard.
+const tinyDoc: GlamDoc = {
+  schema: 'glamour/v0.1',
+  canvas: { w: 200, h: 200 },
+  nodes: [
+    { id: 'ink', type: 'stroke', x: 0, y: 0, points: [], stroke: '#1a1a1a', strokeWidth: 22 },
+    { id: 'handle', type: 'circle', x: 100, y: 98, r: 14, fill: '#2e9e5b' },
+  ],
+  guided: { strokes: [{ path: [100, 98, 100, 104], into: 'ink', handle: 'handle' }], emit: 'dotted' },
+};
+
+test('a guided path shorter than the 52px projection window still completes', () => {
+  h = createHarness(tinyDoc);
+  h.stroke(dense([[100, 98], [100, 104]], 2));
+  const last = h.guided[h.guided.length - 1];
+  expect(last.done).toBe(true);
+  expect(last.progress).toBe(1);
+  expect(h.emits.map((e) => e.event)).toContain('dotted');
+});
+
+test('a short path is still gated on grabbing the handle first', () => {
+  // The clamp must not make a tiny stroke complete itself. A press that never
+  // lands within the grab radius must not start a drag at all.
+  //
+  // Note what is NOT asserted: that a *grabbed* tiny path can be missed. It
+  // cannot, and should not be — a 6px dot inside a 60px tolerance is finished
+  // by any press near it, which is the right behaviour for a dot. Precision is
+  // the wrong thing to demand of a full stop.
+  h = createHarness(tinyDoc);
+  h.stroke(dense([[190, 190], [186, 184]], 3));
+  expect(h.guided.some((e) => e.done)).toBe(false);
+  expect(h.node('ink')!.points).toEqual([]);
+});

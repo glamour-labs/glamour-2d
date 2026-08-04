@@ -106,7 +106,7 @@ function atFraction(flat, t) {
  * Where direction arrows go along one stroke: always ~40% in (worksheets put
  * the head where direction needs confirming, not where the pencil stops), plus
  * one shortly after any turn sharper than 60°, which is what makes `Z`, `W`
- * and the `h` arch readable rather than ambiguous. Capped at three.
+ * and the `h` arch readable rather than ambiguous. Two is the ceiling.
  */
 function arrowAnchors(flat) {
   const anchors = [0.4];

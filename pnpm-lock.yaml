@@ -93,6 +93,10 @@ importers:
       '@glam/core':
         specifier: '*'
         version: link:../../packages/core
+    devDependencies:
+      '@glam/player':
+        specifier: '*'
+        version: link:../../packages/player
 
   examples/react-crab:
     dependencies:

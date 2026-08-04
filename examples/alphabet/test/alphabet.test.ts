@@ -117,19 +117,24 @@ describe('generated documents', () => {
     }
   });
 
-  it('keeps every guided path long enough for the player to project onto', () => {
-    // The runtime scans a fixed 52px forward window; a path shorter than that
-    // would complete on the first pointermove.
+  it('gives every guided path at least two distinct points', () => {
+    // Deliberately NOT a minimum-length rule. An earlier version of this test
+    // asserted every path cleared the player's 52px projection window and then
+    // exempted `i` and `j` — the only two that did not — while both letters
+    // were unfinishable in the shipped game. Whether a stroke can actually be
+    // completed is now proved by driving the real runtime, in
+    // `alphabet-guided.browser.test.ts`. This only guards degenerate geometry.
     for (const c of combos.filter((x) => x.mode === 'easy')) {
       const doc = buildDoc({ letter: c.letter, upper: c.upper, mode: c.mode, theme: c.theme }) as GlamDoc;
       doc.guided!.strokes.forEach((s, i) => {
+        const label = `${c.theme}/${c.caseKey}/${c.letter} stroke ${i + 1}`;
+        expect(s.path.length, label).toBeGreaterThanOrEqual(4);
+        expect(s.path.length % 2, label).toBe(0);
         let len = 0;
         for (let k = 2; k < s.path.length; k += 2) {
           len += Math.hypot(s.path[k] - s.path[k - 2], s.path[k + 1] - s.path[k - 1]);
         }
-        // `i`/`j` dots are deliberately tiny — everything else is a real stroke.
-        const min = ['i', 'j'].includes(c.letter.toLowerCase()) && i === 1 ? 1 : 60;
-        expect(len, `${c.theme}/${c.caseKey}/${c.letter} stroke ${i + 1}`).toBeGreaterThan(min);
+        expect(len, label).toBeGreaterThan(0);
       });
     }
   });

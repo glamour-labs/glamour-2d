@@ -146,7 +146,9 @@ export const THEMES = {
     },
 
     label: { color: '#4B4B4B', size: 42, x: 40, y: 32 },
-    caption: { color: '#AFAFAF', size: 18, x: 34, fromBottom: 38 },
+    // Clear of the panel: its bottom edge sits at H-23, and x must miss the
+    // 32px corner radius that starts at x=18.
+    caption: { color: '#AFAFAF', size: 18, x: 58, fromBottom: 54 },
     numeralOutside: '#4B4B4B',
   },
 };

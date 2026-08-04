@@ -288,11 +288,18 @@ export function renderGlamour(
     let best = guidedProgress;
     let bd = Infinity;
     for (let k = 0; k <= 26; k++) {
-      const t = guidedProgress + (win * k) / 26;
-      if (t > 1) break;
+      // Clamp rather than bail: on a path SHORTER than the 52px window, `win`
+      // exceeds 1 and the raw samples step straight over the end — 0, 0.36,
+      // 0.71, then break — so t=1 was never evaluated and progress saturated
+      // below every completion gate. Any such stroke was unfinishable (the dot
+      // on a lowercase `i` being the obvious one). Clamping guarantees the
+      // endpoint is always in the sample set; for a long path this only means
+      // the last sample lands exactly on 1 instead of just short of it.
+      const t = Math.min(1, guidedProgress + (win * k) / 26);
       const p = gAt(info, t);
       const d = (p[0] - px) ** 2 + (p[1] - py) ** 2;
       if (d < bd) { bd = d; best = t; }
+      if (t >= 1) break;
     }
     return bd <= gate * gate ? Math.max(guidedProgress, best) : guidedProgress;
   }

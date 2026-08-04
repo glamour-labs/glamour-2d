@@ -463,6 +463,18 @@ deliberate departures. Each is a real decision, not an oversight.
 | `a` `d` `g` `q` | **1** stroke — bowl, then *retrace up* the stem and pull back down | **2** strokes — bowl, then the stem/tail as its own pen-stroke | ZB's single stroke needs a full up-and-back retrace of the stem. It adds drag length without adding a motor lesson, and it makes the bowl and the stem impossible to score separately. HWT and every tracing app we surveyed split them the same way. The rendered shape is identical. |
 | `J` | 2 strokes **with** a top bar | 2 strokes with a top bar | Followed — but note this is genuinely contested. US charts are unanimous for the bar; several UK schemes (Little Wandle) deliberately omit it, and most digital fonts have no bar. If a UK variant is ever needed, this is the first switch to add. |
 | `t` | full-ascender or 3/4 height, split by curriculum | 3/4 height (top at y = 0.40) | The shorter `t` is what distinguishes it from `l` at a glance, which matters more in a tracing game than curriculum fidelity. |
+| `t` | "top line → down → baseline" (a bare stem) | a small curved foot on the stem | Almost every modern worksheet and school font gives `t` a foot; a bare vertical reads as a cross, not a letter. The stroke order is unchanged — stem first, cross second. |
+
+### Optical adjustments (shape, not stroke order)
+
+Three glyphs stop just short of the line the tables name, because hitting it exactly reads worse
+at monoline weight. None changes the stroke count, order or direction:
+
+| Glyph | Table says | We ship | Why |
+|---|---|---|---|
+| `M` | the middle vertex reaches the baseline | y = 1.88 | A vertex landing exactly on the baseline makes the two halves look like they sag. |
+| `N` | the diagonal reaches the baseline | y = 1.86 | Same; also keeps the diagonal's round cap from spilling below the rule. |
+| `W` | the middle apex reaches the top line | y = 0.34 | At the fat pen weight a full-height apex closes up the two valleys. |
 
 Everything else — including the contested set (`f` 2 strokes cross-last, `k` 2 strokes,
 `t` stem-first, `y` right-arm-into-the-tail, `b`/`p` line-first vs `d`/`q` circle-first,

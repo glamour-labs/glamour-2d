@@ -60,7 +60,9 @@ export const UPPER = {
     [line(0.10, 1.00, 0.88, 1.00)],
   ] },
   G: { w: 1.60, strokes: [
-    [arc(0.80, 1.00, 0.78, 1.00, -52, -358), line(1.575, 0.97, 0.78, 0.97)],
+    // The bar starts exactly on the arc's terminal — anything else leaves a
+    // gap the flattener bridges with a visible diagonal jog.
+    [arc(0.80, 1.00, 0.78, 1.00, -52, -358), line(1.5795, 1.0349, 0.78, 1.0349)],
   ] },
   H: { w: 1.22, strokes: [
     [line(0.10, 0, 0.10, 2)],
@@ -247,6 +249,12 @@ export const LOWER = {
     [
       line(0.10, 1.00, 0.10, 1.58),
       arc(0.50, 1.58, 0.40, 0.42, 180, 0),
+      // Push UP to the midline, then pull down to the baseline. Both matter:
+      // without the push-up the right side starts at 1.58 and the glyph reads
+      // as a lop-sided "ʋ" with a stunted shoulder — compare capital `U`,
+      // which returns to the top line.
+      line(0.90, 1.58, 0.90, 1.00),
+      retrace(line(0.90, 1.00, 0.90, 1.58)),
       line(0.90, 1.58, 0.90, 2),
     ],
   ] },

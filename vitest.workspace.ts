@@ -37,7 +37,7 @@ export default defineWorkspace([
         'skills/*/test/**/*.test.ts',
         // The alphabet generator is pure geometry + validate, and its staleness
         // guard reads the committed .glam files off disk — node, not browser.
-        'examples/alphabet/test/**/*.test.ts',
+        'examples/alphabet/test/alphabet.test.ts',
       ],
       environment: 'node',
       // Headless-Chromium renders are ~1-2s each, several per file.
@@ -54,6 +54,8 @@ export default defineWorkspace([
         'packages/player/test/{player,ink,harness,guided,webcomponent,loop}.test.ts',
         'packages/react/test/**/*.test.{ts,tsx}',
         'apps/studio/test/**/*.test.{ts,tsx}',
+        // Drives every guided letter through the REAL player, so it needs GL.
+        'examples/alphabet/test/**/*.browser.test.ts',
       ],
       browser,
       testTimeout: 60_000,
