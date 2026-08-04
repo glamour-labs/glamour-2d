@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validate, type GlamDoc } from '@glam/core';
+import { validate, traceMatch, type GlamDoc } from '@glam/core';
 // @ts-expect-error — the generator is plain ESM JS, deliberately un-TypeScripted
 // so it stays runnable with a bare `node build.mjs` from a fresh checkout.
 import { buildDoc } from '../src/build.mjs';
@@ -145,6 +145,42 @@ describe('generated documents', () => {
         expect(len, label).toBeGreaterThan(0);
       });
     }
+  });
+
+  it('lets a careful trace pass every free-write stroke, and a scribble pass none', () => {
+    // The free-write counterpart to the guided completability sweep. Nothing
+    // covered this before, which is how a host-side heuristic that rejected any
+    // stroke inking under 14px shipped — the dot on an `i` is a 5.6px target, so
+    // `i` and `j` became unpassable while every test stayed green.
+    //
+    // Pure `traceMatch`, so it costs nothing: no scene, no browser.
+    const PASS = 0.6;
+    const unpassable: string[] = [];
+    const falsePositives: string[] = [];
+    for (const c of combos.filter((x) => x.mode === 'hard')) {
+      const doc = buildDoc({ letter: c.letter, upper: c.upper, mode: c.mode, theme: c.theme }) as GlamDoc;
+      doc.ink!.strokes!.forEach((s, i) => {
+        const label = `${c.theme}/${c.caseKey}/${c.letter} stroke ${i + 1}`;
+        const target = s.match!.target;
+        const tol = s.match!.tolerance;
+
+        // A careful child: the target path with a couple of pixels of wobble.
+        const careful = target.map((v, k) => v + ((k % 4) - 1.5) * 2);
+        const good = traceMatch(target, careful, tol);
+        if (!(good.score >= PASS && good.startOk)) {
+          unpassable.push(`${label}: score ${good.score.toFixed(2)} startOk ${good.startOk}`);
+        }
+
+        // A scribble in the opposite corner must NOT pass, or the verdict is
+        // decorative and every letter is "correct".
+        const scribble: number[] = [];
+        for (let k = 0; k <= 24; k++) scribble.push(30 + k * 3, 40 + (k % 5) * 4);
+        const bad = traceMatch(target, scribble, tol);
+        if (bad.score >= PASS && bad.startOk) falsePositives.push(`${label}: scored ${bad.score.toFixed(2)}`);
+      });
+    }
+    expect(unpassable).toEqual([]);
+    expect(falsePositives).toEqual([]);
   });
 
   it('has the committed .glam files in sync with the generator', () => {
