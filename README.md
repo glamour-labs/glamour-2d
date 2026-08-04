@@ -12,6 +12,9 @@ composes interactive animations instead of guessing at them.
 
 ## Documentation
 
+- **[Alphabet tracing](examples/alphabet/README.md)** — the largest worked example: 208 generated
+  documents (26 letters × case × difficulty × two worksheet aesthetics) and a playable game, with
+  every letterform traceable to a real handwriting curriculum.
 - **[Using Glamour](docs/USING-GLAMOUR.md)** — getting started: author a `.glam`, verify it, and embed
   it in a real project (three paths), plus how an AI agent authors one.
 - **[Testing behavior](docs/TESTING-BEHAVIOR.md)** — the drive-and-assert harness: exercise an
@@ -79,7 +82,11 @@ npx playwright install chromium   # once — headless render + the browser test 
 pnpm build
 pnpm test               # all tests across every surface (node + real-Chromium projects)
 pnpm --filter @glam/studio dev   # the visual Studio
+pnpm playground                  # static server for the example pages
 ```
+
+Then open <http://localhost:4321/examples/alphabet/> for the alphabet tracing game, or
+<http://localhost:4321/examples/playground/> for every sketch on one page.
 
 ## The `glam` CLI
 
@@ -161,6 +168,13 @@ AI skill (`examples/ai-authored/crab.glam`), then embedded in a real React app
 
 Deferred: image→animation, raster/sprite + halftone texture (the orb's last polish), keyboard +
 collision + spawning (Rung 3), WebGL.
+
+**Alphabet tracing** (the capability class end-to-end): the whole English alphabet as a playable
+game — `examples/alphabet/`. One glyph dataset (52 hand-authored skeletons on a four-line band
+system, stroke order cross-checked against Zaner-Bloser / HWT / D'Nealian / UK schemes) generates
+208 documents across two worksheet aesthetics. EASY uses the native `guided` block; HARD uses
+`ink` + `match`. Guards: every document validates, and a test asserts the committed files match
+the generator.
 
 Docs: [Roadmap / what's next](docs/ROADMAP.md) · [Using Glamour](docs/USING-GLAMOUR.md) · [Decisions](docs/DECISIONS.md) ·
 plans under `docs/superpowers/plans/` · proof sketches in `sketches/` (progress-ring, toggle, crab-game,

@@ -114,12 +114,24 @@
       }
       details summary { cursor: pointer; color: var(--muted); font-size: 12px; margin-top: 14px; }
       .empty { color: var(--muted); font-size: 13px; }
+      a.bigLink {
+        display: block; text-decoration: none; margin: 0 0 16px;
+        background: linear-gradient(135deg, #1e2d4d, #24344f);
+        border: 1px solid var(--accent); border-radius: 12px; padding: 12px 14px;
+      }
+      a.bigLink b { display: block; color: var(--ink); font-size: 14px; }
+      a.bigLink span { display: block; color: var(--muted); font-size: 11.5px; margin-top: 3px; line-height: 1.4; }
+      a.bigLink:hover { background: linear-gradient(135deg, #24365c, #2b3d5c); }
     </style>
   </head>
   <body>
     <aside>
       <p class="brand">✨ Glamour <span>Playground</span></p>
       <p class="tagline">Every sketch + example, live. Click one to load it.</p>
+      <a class="bigLink" href="/examples/alphabet/">
+        <b>✏️ Alphabet Tracing game →</b>
+        <span>All 26 letters · upper + lower · guided + free write · two worksheet styles</span>
+      </a>
       <div id="nav"></div>
     </aside>
 
@@ -150,7 +162,30 @@
       // Curated manifest — served from the repo root, so paths are absolute.
       const GLAMOURS = [
         {
-          group: 'Rung 2 — input + ink (new)',
+          group: 'Alphabet game — the new worksheet UI',
+          items: [
+            { title: 'h — classroom paper · guided', path: '/examples/alphabet/glam/paper/lower/h-easy.glam',
+              blurb: 'The same letter h, rebuilt on the four-line school rule: grey ghost, dotted centre path, green puck. Drag the puck along the path.', tags: ['paper', 'easy'], new: true,
+              hint: 'Press the green dot and pull it: down the stem, back up, over the arch, down to the foot.' },
+            { title: 'h — kid-app card · guided', path: '/examples/alphabet/glam/card/lower/h-easy.glam',
+              blurb: 'Same h, same glyph data, the other worksheet: a chunky hollow channel on a rounded card.', tags: ['card', 'easy'], new: true,
+              hint: 'Press the orange puck and pull it along the channel.' },
+            { title: 'y — classroom paper · free write', path: '/examples/alphabet/glam/paper/lower/y-hard.glam',
+              blurb: 'Two strokes, free-drawn and scored. The right arm carries on into the tail — that is the taught form.', tags: ['paper', 'hard', '2-stroke'], new: true,
+              hint: 'Start on the numbered dot. Stroke 1 the short left arm; stroke 2 the long right arm into the tail.' },
+            { title: 'y — kid-app card · free write', path: '/examples/alphabet/glam/card/lower/y-hard.glam',
+              blurb: 'The same two strokes in the app aesthetic, scored against the channel centreline.', tags: ['card', 'hard', '2-stroke'], new: true,
+              hint: 'Start on the orange chip and draw each stroke yourself.' },
+            { title: 'A — classroom paper · free write', path: '/examples/alphabet/glam/paper/upper/a-hard.glam',
+              blurb: 'A three-stroke capital: numbered start dot, direction arrows, per-stroke reveal.', tags: ['paper', 'hard', '3-stroke'], new: true,
+              hint: 'Three strokes: left diagonal, right diagonal, then the crossbar.' },
+            { title: 'G — kid-app card · guided', path: '/examples/alphabet/glam/card/upper/g-easy.glam',
+              blurb: 'One stroke, including the crossbar — the only right-to-left stroke in the alphabet.', tags: ['card', 'easy'], new: true,
+              hint: 'Pull all the way around and then back to the left along the bar.' },
+          ],
+        },
+        {
+          group: 'Rung 2 — input + ink (original h/y sketches)',
           items: [
             { title: 'Draw h — EASY', path: '/sketches/draw-letter/letter-h-easy.glam',
               blurb: 'Duolingo draw-letter, EASY: a blue circle + white arrow walks the dashed path to show you the way. One stroke. Sparkles + Reset on completion.', tags: ['Rung 2', 'draw', 'easy'], new: true,

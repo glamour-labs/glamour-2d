@@ -2,9 +2,21 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "glamour",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/serve.mjs",
+        "4321"
+      ],
+      "port": 4321
+    },
+    {
       "name": "v2-playground",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "exec npx -y http-server -p 5190 -c-1 ."],
+      "runtimeArgs": [
+        "-c",
+        "exec npx -y http-server -p 5190 -c-1 ."
+      ],
       "port": 5190
     }
   ]

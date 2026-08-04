@@ -1,0 +1,13 @@
+{
+  "name": "@glam/example-alphabet",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node build.mjs --check"
+  },
+  "dependencies": {
+    "@glam/core": "*"
+  }
+}

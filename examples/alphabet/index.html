@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Alphabet Tracing — Glamour</title>
+    <style>
+      /* The page wears the active worksheet's own palette, so switching
+         aesthetic changes the whole room, not just the card. */
+      :root {
+        --page: #f2efe6;
+        --panel: #ffffff;
+        --line: #e6e2d6;
+        --ink: #3a3a3a;
+        --muted: #8a8578;
+        --accent: #2e9e5b;
+        --accent-soft: #e8f4ec;
+        --radius: 14px;
+        --shadow: 0 10px 30px rgba(58, 52, 40, 0.10);
+      }
+      html[data-theme='card'] {
+        --page: #fdeed2;
+        --panel: #ffffff;
+        --line: #e5e5e5;
+        --ink: #4b4b4b;
+        --muted: #afafaf;
+        --accent: #58cc02;
+        --accent-soft: #edf9e2;
+        --radius: 20px;
+        --shadow: 0 12px 30px rgba(120, 90, 30, 0.12);
+      }
+
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, -apple-system, sans-serif;
+        background: var(--page);
+        color: var(--ink);
+        -webkit-tap-highlight-color: transparent;
+        transition: background 0.25s ease;
+      }
+
+      .app {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 18px 20px 40px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-height: 100%;
+      }
+
+      /* ---------- header ---------- */
+      header {
+        display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+      }
+      .brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+      .brand h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.4px; }
+      .brand .sub { color: var(--muted); font-size: 13px; }
+
+      .seg {
+        display: inline-flex; background: var(--panel); border: 1px solid var(--line);
+        border-radius: 999px; padding: 3px; gap: 2px; box-shadow: var(--shadow);
+      }
+      .seg button {
+        border: 0; background: transparent; color: var(--muted);
+        font: inherit; font-size: 13px; font-weight: 700;
+        padding: 7px 15px; border-radius: 999px; cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+        white-space: nowrap;
+      }
+      .seg button[aria-pressed='true'] { background: var(--accent); color: #fff; }
+      .seg button:not([aria-pressed='true']):hover { color: var(--ink); }
+
+      /* ---------- body grid ---------- */
+      .body {
+        display: grid;
+        grid-template-columns: 232px minmax(0, 1fr) 260px;
+        gap: 16px;
+        align-items: start;
+      }
+      .card {
+        background: var(--panel); border: 1px solid var(--line);
+        border-radius: var(--radius); box-shadow: var(--shadow);
+        padding: 14px;
+      }
+      .card h2 {
+        margin: 0 0 10px; font-size: 11px; letter-spacing: 1.1px;
+        text-transform: uppercase; color: var(--muted); font-weight: 800;
+      }
+
+      /* ---------- letter rail ---------- */
+      .rail-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+      .letter {
+        position: relative; aspect-ratio: 1; border-radius: 11px;
+        border: 1.5px solid var(--line); background: transparent;
+        font: inherit; font-size: 17px; font-weight: 800; color: var(--ink);
+        cursor: pointer; display: grid; place-items: center;
+        transition: transform 0.1s, background 0.15s, border-color 0.15s;
+      }
+      .letter:hover { border-color: var(--accent); }
+      .letter:active { transform: scale(0.94); }
+      .letter[aria-current='true'] { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .letter.done::after {
+        content: '✓'; position: absolute; top: -4px; right: -4px;
+        width: 15px; height: 15px; border-radius: 50%;
+        background: var(--accent); color: #fff; font-size: 9px;
+        display: grid; place-items: center; border: 2px solid var(--panel);
+      }
+      .letter[aria-current='true'].done::after { background: var(--ink); }
+
+      .progress-wrap { margin-top: 12px; }
+      .bar { height: 9px; border-radius: 999px; background: var(--line); overflow: hidden; }
+      .bar > i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 999px; transition: width 0.35s ease; }
+      .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 6px; font-weight: 700; }
+
+      /* ---------- stage ---------- */
+      .stage-card { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 18px 14px; }
+      #stage {
+        width: 420px; max-width: 100%; margin: 0 auto;
+        border-radius: 12px; overflow: hidden; touch-action: none;
+        line-height: 0;
+      }
+      #stage canvas { display: block; width: 100% !important; height: auto !important; }
+      .prompt {
+        text-align: center; font-size: 15px; font-weight: 700; min-height: 22px;
+        color: var(--ink);
+      }
+      .prompt small { display: block; font-weight: 500; color: var(--muted); font-size: 13px; margin-top: 3px; }
+      .stage-actions { display: flex; gap: 8px; }
+      .btn {
+        border: 1.5px solid var(--line); background: var(--panel); color: var(--ink);
+        font: inherit; font-size: 13px; font-weight: 700; padding: 9px 18px;
+        border-radius: 999px; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+      }
+      .btn:hover { border-color: var(--accent); }
+      .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .btn.primary.pulse { animation: pulse 1.1s ease-in-out infinite; }
+      @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+
+      /* ---------- right rail ---------- */
+      .steps { display: flex; flex-direction: column; gap: 7px; }
+      .step {
+        display: flex; align-items: center; gap: 9px; font-size: 13px;
+        color: var(--muted); font-weight: 600;
+      }
+      .step .n {
+        width: 21px; height: 21px; border-radius: 50%; display: grid; place-items: center;
+        font-size: 11px; font-weight: 800; background: var(--line); color: var(--ink); flex: none;
+      }
+      .step.active { color: var(--ink); }
+      .step.active .n { background: var(--accent); color: #fff; }
+      .step.done .n { background: var(--accent-soft); color: var(--accent); }
+      .step.done { text-decoration: line-through; }
+
+      .meter { margin-top: 12px; font-size: 12px; color: var(--muted); }
+      .meter dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 6px 0 0; }
+      .meter dt { font-weight: 700; }
+      .meter dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+      .verdict { margin-top: 10px; font-weight: 800; font-size: 13px; }
+      .verdict.pass { color: var(--accent); }
+      .verdict.retry { color: #d98a8a; }
+
+      .swatch-note { font-size: 12px; color: var(--muted); line-height: 1.5; }
+      details.src { margin-top: 12px; }
+      details.src summary { cursor: pointer; font-size: 12px; color: var(--muted); font-weight: 700; }
+      details.src pre {
+        font-family: ui-monospace, monospace; font-size: 10px; line-height: 1.5;
+        max-height: 220px; overflow: auto; background: var(--page);
+        border: 1px solid var(--line); border-radius: 10px; padding: 9px; margin-top: 8px;
+      }
+
+      .toast {
+        position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 260%);
+        background: var(--accent); color: #fff; font-weight: 800; font-size: 15px;
+        padding: 12px 26px; border-radius: 999px; box-shadow: var(--shadow);
+        transition: transform 0.32s cubic-bezier(0.2, 1.4, 0.4, 1); z-index: 20;
+      }
+      .toast.show { transform: translate(-50%, 0); }
+
+      /* Below the three-column breakpoint the card comes FIRST. A child opening
+         this on a phone should land on the letter, not on a wall of 26 buttons;
+         the rail becomes a one-row horizontal strip underneath it. */
+      @media (max-width: 1000px) {
+        .body { display: flex; flex-direction: column; }
+        .stage-card { order: 1; }
+        .rail { order: 2; }
+        .body > aside:last-child { order: 3; }
+        .rail-grid {
+          display: flex; overflow-x: auto; gap: 7px;
+          padding-bottom: 5px; scroll-snap-type: x proximity;
+          -webkit-overflow-scrolling: touch;
+        }
+        .rail-grid::-webkit-scrollbar { height: 5px; }
+        .rail-grid::-webkit-scrollbar-thumb { background: var(--line); border-radius: 99px; }
+        .letter { flex: 0 0 42px; height: 42px; aspect-ratio: auto; scroll-snap-align: center; }
+      }
+      @media (max-width: 640px) {
+        .app { padding: 12px 12px 28px; gap: 12px; }
+        header { gap: 8px; }
+        .brand { margin-right: 0; width: 100%; }
+        .brand h1 { font-size: 18px; }
+        .brand .sub { display: none; }
+        .seg button { padding: 6px 11px; font-size: 12px; }
+        .stage-card { padding: 12px 10px; }
+        .btn { padding: 8px 14px; font-size: 12px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <div class="brand">
+          <h1>✏️ Alphabet Tracing</h1>
+          <span class="sub">26 letters · both cases · two worksheets</span>
+        </div>
+        <div class="seg" id="themeSeg" role="group" aria-label="Worksheet style"></div>
+        <div class="seg" id="caseSeg" role="group" aria-label="Letter case"></div>
+        <div class="seg" id="modeSeg" role="group" aria-label="Difficulty"></div>
+      </header>
+
+      <div class="body">
+        <aside class="card rail">
+          <h2>Alphabet</h2>
+          <div class="rail-grid" id="rail"></div>
+          <div class="progress-wrap">
+            <div class="bar"><i id="barFill"></i></div>
+            <div class="progress-label"><span id="progText">0 of 26</span><button class="btn" id="resetAll" style="padding:2px 9px;font-size:10px">clear</button></div>
+          </div>
+        </aside>
+
+        <main class="card stage-card">
+          <div class="prompt" id="prompt"></div>
+          <div id="stage"></div>
+          <div class="stage-actions">
+            <button class="btn" id="btnReset">↺ Try again</button>
+            <button class="btn" id="btnPrev">← Prev</button>
+            <button class="btn primary" id="btnNext">Next →</button>
+          </div>
+        </main>
+
+        <aside class="card">
+          <h2>Strokes</h2>
+          <div class="steps" id="steps"></div>
+          <div class="meter" id="meter"></div>
+          <div class="verdict" id="verdict"></div>
+          <h2 style="margin-top:18px">This worksheet</h2>
+          <p class="swatch-note" id="themeNote"></p>
+          <details class="src">
+            <summary>View the .glam source</summary>
+            <pre id="src"></pre>
+          </details>
+        </aside>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="/packages/player/dist/glam-player.umd.js"></script>
+    <script>
+      const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+      const THEMES = {
+        paper: {
+          label: 'Classroom paper',
+          note: 'The traditional four-line school rule — blue ceiling, dashed midline, red baseline. A pencil-weight grey ghost letter with a dotted centre path, numbered green start dots and orange direction arrows. Zaner-Bloser manuscript letterforms.',
+        },
+        card: {
+          label: 'Kid-app card',
+          note: 'The modern tracing-app look — one bold baseline shelf, a chunky hollow channel the ink fills, and a rounded white card. Squeezed ascender so the letter fills the frame. Handwriting-Without-Tears shapes as a rounded sans.',
+        },
+      };
+      const MODES = {
+        easy: { label: 'Guided', hint: 'Press the coloured dot and drag it along the path — the ink follows your finger.' },
+        hard: { label: 'Free write', hint: 'Start on the numbered dot and draw the letter yourself. Follow the arrows.' },
+      };
+      const PASS = 0.6;
+
+      const $ = (id) => document.getElementById(id);
+      const state = {
+        theme: localStorage.getItem('alpha.theme') || 'paper',
+        upper: (localStorage.getItem('alpha.case') || 'upper') === 'upper',
+        mode: localStorage.getItem('alpha.mode') || 'easy',
+        letter: localStorage.getItem('alpha.letter') || 'A',
+        player: null,
+        doc: null,
+        strokeCount: 1,
+        current: 0,
+        finished: false,
+        advanceTimer: null,
+      };
+
+      const progressKey = () => `alpha.done.${state.theme}.${state.upper ? 'upper' : 'lower'}.${state.mode}`;
+      const loadDone = () => new Set(JSON.parse(localStorage.getItem(progressKey()) || '[]'));
+      const saveDone = (set) => localStorage.setItem(progressKey(), JSON.stringify([...set]));
+
+      /* ---------------- chrome ---------------- */
+
+      function buildSeg(el, options, get, set) {
+        el.innerHTML = '';
+        for (const [value, label] of options) {
+          const b = document.createElement('button');
+          b.textContent = label;
+          b.setAttribute('aria-pressed', String(get() === value));
+          b.onclick = () => { set(value); };
+          el.appendChild(b);
+        }
+      }
+
+      function renderSegs() {
+        buildSeg($('themeSeg'), Object.entries(THEMES).map(([k, v]) => [k, v.label]),
+          () => state.theme, (v) => { state.theme = v; localStorage.setItem('alpha.theme', v); reload(true); });
+        buildSeg($('caseSeg'), [['upper', 'ABC'], ['lower', 'abc']],
+          () => (state.upper ? 'upper' : 'lower'),
+          (v) => { state.upper = v === 'upper'; localStorage.setItem('alpha.case', v); reload(true); });
+        buildSeg($('modeSeg'), Object.entries(MODES).map(([k, v]) => [k, v.label]),
+          () => state.mode, (v) => { state.mode = v; localStorage.setItem('alpha.mode', v); reload(true); });
+      }
+
+      function renderRail() {
+        const done = loadDone();
+        const rail = $('rail');
+        rail.innerHTML = '';
+        for (const L of LETTERS) {
+          const b = document.createElement('button');
+          b.className = 'letter' + (done.has(L) ? ' done' : '');
+          b.textContent = state.upper ? L : L.toLowerCase();
+          b.setAttribute('aria-current', String(L === state.letter));
+          b.onclick = () => go(L);
+          rail.appendChild(b);
+        }
+        const pct = (done.size / LETTERS.length) * 100;
+        $('barFill').style.width = pct + '%';
+        $('progText').textContent = `${done.size} of ${LETTERS.length}`;
+      }
+
+      function renderSteps() {
+        const steps = $('steps');
+        steps.innerHTML = '';
+        for (let i = 0; i < state.strokeCount; i++) {
+          const row = document.createElement('div');
+          const status = state.finished || i < state.current ? 'done' : i === state.current ? 'active' : '';
+          row.className = 'step ' + status;
+          row.innerHTML = `<span class="n">${i + 1}</span><span>Stroke ${i + 1} of ${state.strokeCount}</span>`;
+          steps.appendChild(row);
+        }
+      }
+
+      /**
+       * Fit the card to whatever room is left below the header.
+       *
+       * Cards are not all the same height — a descender letter is a whole band
+       * taller than `A` — so a fixed CSS width overflows on `g j p q y`. Scale
+       * by WIDTH and let height follow, which preserves the aspect ratio; the
+       * runtime maps pointer positions through getBoundingClientRect, so a
+       * CSS-scaled canvas stays pixel-accurate under a finger.
+       */
+      function fitStage() {
+        if (!state.doc) return;
+        const stage = $('stage');
+        stage.style.width = '';
+        const top = stage.getBoundingClientRect().top;
+        const roomBelow = 108; // the action row + card padding
+        const avail = window.innerHeight - top - roomBelow;
+        const maxW = stage.parentElement.clientWidth - 28;
+        const aspect = state.doc.canvas.w / state.doc.canvas.h;
+        const w = Math.max(230, Math.min(420, maxW, avail * aspect));
+        stage.style.width = Math.floor(w) + 'px';
+      }
+      window.addEventListener('resize', fitStage);
+
+      function toast(msg) {
+        const t = $('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        clearTimeout(t._h);
+        t._h = setTimeout(() => t.classList.remove('show'), 1700);
+      }
+
+      /* ---------------- the game ---------------- */
+
+      const docUrl = () =>
+        `/examples/alphabet/glam/${state.theme}/${state.upper ? 'upper' : 'lower'}/` +
+        `${state.letter.toLowerCase()}-${state.mode}.glam`;
+
+      /** Guide nodes are grouped by the `g<n>_` id prefix — hide the finished
+          stroke's group, light up the next one. Same convention the docs are
+          generated with, so the host needs no per-letter knowledge. */
+      const groupIds = (doc, n) => doc.nodes.map((x) => x.id).filter((id) => new RegExp(`^g${n}_`).test(id));
+      const sparkIds = (doc) => doc.nodes.map((x) => x.id).filter((id) => /^spark/.test(id));
+
+      function celebrate() {
+        const doc = state.doc;
+        const p = state.player;
+        state.finished = true;
+        for (let n = 1; n <= state.strokeCount; n++) groupIds(doc, n).forEach((id) => p.set(id, 'opacity', 0));
+        // Theme B snaps the whole letter to its success green; theme A stays
+        // quiet on purpose — restraint is that aesthetic's whole point.
+        if (state.theme === 'card') {
+          for (let n = 1; n <= state.strokeCount; n++) p.set(`ink${n}`, 'stroke', '#58CC02');
+        }
+        const sparks = sparkIds(doc);
+        sparks.forEach((id, i) => setTimeout(() => p.set(id, 'opacity', 1), i * 45));
+        setTimeout(() => sparks.forEach((id) => p.set(id, 'opacity', 0)), 1500);
+
+        const done = loadDone();
+        done.add(state.letter);
+        saveDone(done);
+        renderRail();
+        renderSteps();
+
+        const nextIdx = LETTERS.indexOf(state.letter) + 1;
+        if (nextIdx < LETTERS.length) {
+          toast(`Nice! ${state.upper ? state.letter : state.letter.toLowerCase()} done`);
+          $('btnNext').classList.add('pulse');
+          state.advanceTimer = setTimeout(() => go(LETTERS[nextIdx]), 1900);
+        } else {
+          toast('🎉 Whole alphabet finished!');
+        }
+      }
+
+      function advanceGuides(index) {
+        const doc = state.doc;
+        const p = state.player;
+        groupIds(doc, index + 1).forEach((id) => p.set(id, 'opacity', 0));
+        groupIds(doc, index + 2).forEach((id) => p.set(id, 'opacity', 1));
+        state.current = index + 1;
+        renderSteps();
+      }
+
+      async function load() {
+        clearTimeout(state.advanceTimer);
+        $('btnNext').classList.remove('pulse');
+        if (state.player) { state.player.destroy(); state.player = null; }
+        $('verdict').textContent = '';
+        $('meter').innerHTML = '';
+        state.current = 0;
+        state.finished = false;
+
+        document.documentElement.dataset.theme = state.theme;
+        $('themeNote').textContent = THEMES[state.theme].note;
+
+        let doc;
+        try {
+          doc = await (await fetch(docUrl())).json();
+        } catch (e) {
+          $('stage').innerHTML = `<p style="padding:40px;color:#b00">Could not load ${docUrl()}</p>`;
+          return;
+        }
+        state.doc = doc;
+        state.strokeCount = (doc.guided?.strokes || doc.ink?.strokes || [{}]).length;
+        $('src').textContent = JSON.stringify(doc, null, 1);
+
+        const shown = state.upper ? state.letter : state.letter.toLowerCase();
+        $('prompt').innerHTML =
+          `Trace the letter <b>${shown}</b><small>${MODES[state.mode].hint}</small>`;
+
+        $('stage').innerHTML = '';
+        const p = Glam.renderGlamour(doc, $('stage'));
+        state.player = p;
+        fitStage();
+        renderSteps();
+
+        if (doc.guided) {
+          p.onGuided((e) => {
+            if (!e.done) return;
+            if (e.index + 1 < state.strokeCount) advanceGuides(e.index);
+            else celebrate();
+          });
+        } else {
+          let allPassed = true;
+          p.onStroke((e) => {
+            const m = e.match;
+            if (m) {
+              $('meter').innerHTML =
+                `<dl><dt>Score</dt><dd>${Math.round(m.score * 100)}%</dd>` +
+                `<dt>Covered</dt><dd>${Math.round(m.coverage * 100)}%</dd>` +
+                `<dt>Off path</dt><dd>${Math.round(m.stray * 100)}%</dd>` +
+                `<dt>Right start</dt><dd>${m.startOk ? 'yes' : 'no'}</dd></dl>`;
+            }
+            const ok = !m || (m.score >= PASS && m.startOk);
+            const v = $('verdict');
+            v.className = 'verdict ' + (ok ? 'pass' : 'retry');
+            v.textContent = ok ? '✓ Good stroke' : '↺ Try that stroke again';
+            const idx = e.index ?? 0;
+            if (idx === 0) allPassed = true;
+            allPassed = allPassed && ok;
+            if (!e.done) advanceGuides(idx);
+            else if (allPassed) celebrate();
+            else {
+              // The runtime advances one pen-stroke per pen-up, so a stroke
+              // cannot be re-attempted in place. Rather than leave the child
+              // stuck on a letter that can no longer pass, reset it for them.
+              state.current = state.strokeCount;
+              renderSteps();
+              toast('Good try — let’s do that one again');
+              state.advanceTimer = setTimeout(() => load(), 1500);
+            }
+          });
+        }
+      }
+
+      function reload(keepLetter) {
+        if (!keepLetter) state.letter = 'A';
+        renderSegs();
+        renderRail();
+        load();
+      }
+
+      function go(L) {
+        state.letter = L;
+        localStorage.setItem('alpha.letter', L);
+        renderRail();
+        load();
+      }
+
+      const step = (d) => {
+        const i = (LETTERS.indexOf(state.letter) + d + LETTERS.length) % LETTERS.length;
+        go(LETTERS[i]);
+      };
+
+      $('btnReset').onclick = () => load();
+      $('btnPrev').onclick = () => step(-1);
+      $('btnNext').onclick = () => step(1);
+      $('resetAll').onclick = () => { localStorage.removeItem(progressKey()); renderRail(); };
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') step(1);
+        else if (e.key === 'ArrowLeft') step(-1);
+        else if (e.key.toLowerCase() === 'r') load();
+      });
+
+      renderSegs();
+      renderRail();
+      load();
+    </script>
+  </body>
+</html>

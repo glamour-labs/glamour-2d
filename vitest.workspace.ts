@@ -35,6 +35,9 @@ export default defineWorkspace([
         'packages/cli/test/**/*.test.ts',
         'packages/mcp/test/**/*.test.ts',
         'skills/*/test/**/*.test.ts',
+        // The alphabet generator is pure geometry + validate, and its staleness
+        // guard reads the committed .glam files off disk — node, not browser.
+        'examples/alphabet/test/**/*.test.ts',
       ],
       environment: 'node',
       // Headless-Chromium renders are ~1-2s each, several per file.
