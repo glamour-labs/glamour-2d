@@ -329,9 +329,10 @@ export class StageShim {
   private pointer: { x: number; y: number } | null = null;
   /** The pointer that owns the current drag; others are ignored while it draws. */
   private activePointerId: number | null = null;
-  /** Where the owner went down, and whether it has since moved meaningfully.
-   *  Ownership stays PROVISIONAL until it moves — see the steal rule below. */
-  private activeDownAt: { x: number; y: number } | null = null;
+  /** Where every currently-down pointer went down. Needed because ownership is
+   *  decided by which pointer MOVES, which can be any of them. */
+  private downAt = new Map<number, { x: number; y: number }>();
+  /** Has the owner actually drawn yet? Until it has, ownership is provisional. */
   private activeMoved = false;
   private handlers = new Map<string, PointerHandler[]>();
   private detach: Array<() => void> = [];
@@ -355,52 +356,47 @@ export class StageShim {
         // are dropped. Deliberately not palm-rejection — just single-pointer
         // discipline, which is what a trace gesture actually is.
         if (type === 'pointerdown') {
-          // "First down wins" is wrong on a tablet, because the first thing down
-          // is often a palm. It fixed the palm-lands-SECOND case and left
-          // palm-lands-FIRST completely broken: the palm became the owner, every
-          // event from the drawing finger was dropped with no ink and no message,
-          // and the palm's own wobble was inked and scored as the stroke.
+          // Ownership is decided by which pointer DRAWS, not by which lands
+          // first. "First down wins" broke palm-lands-first; "last down wins
+          // until someone moves" broke the mirror case, where the finger is
+          // down and a palm settles before the child starts moving. Either
+          // ordering happens on a tablet, so neither ordering can be the rule.
           //
-          // So ownership is provisional until the owner actually draws. A later
-          // pointer may take over from an owner that has not moved — a palm
-          // rests, a finger traces, and the one that traces wins. Once the owner
-          // has moved, it keeps the drag and everything else is ignored.
+          // Every down is a candidate. The most recent one is the provisional
+          // owner, so a tap still works (a dot never moves). But the moment a
+          // candidate actually moves, it takes the drag — see pointermove.
+          this.downAt.set(pe.pointerId, { x: pe.clientX, y: pe.clientY });
           if (this.activePointerId !== null && this.activeMoved) return;
-          if (this.activePointerId !== null && this.activePointerId !== pe.pointerId) {
-            try {
-              (canvas as HTMLCanvasElement).releasePointerCapture?.(this.activePointerId);
-            } catch { /* already gone */ }
-          }
-          this.activePointerId = pe.pointerId;
-          this.activeDownAt = { x: pe.clientX, y: pe.clientY };
-          this.activeMoved = false;
-          // Capture, or the owner can never be released. A MOUSE gets no
-          // implicit pointer capture: press inside the canvas, release outside,
-          // and no `pointerup` is ever delivered here — the owner id would be
-          // stranded and every later pointer discarded, leaving the canvas dead
-          // until reload. Dragging past the edge of a letter and letting go is
-          // the most ordinary thing a user does, so this is not an edge case.
-          try {
-            (canvas as HTMLCanvasElement).setPointerCapture?.(pe.pointerId);
-          } catch {
-            // Capture can be refused (a pointer already gone, a headless env).
-            // `lostpointercapture` below is the backstop either way.
-          }
+          this.claim(canvas as HTMLCanvasElement, pe.pointerId);
         } else if (this.activePointerId !== null && pe.pointerId !== this.activePointerId) {
-          return;
+          // Not the owner — but a non-owner that starts DRAWING while the owner
+          // sits still is the one we actually want, so the steal has to be
+          // considered before the reject, not after it.
+          const from = type === 'pointermove' && !this.activeMoved
+            ? this.downAt.get(pe.pointerId)
+            : undefined;
+          if (!from || (pe.clientX - from.x) ** 2 + (pe.clientY - from.y) ** 2 <= 36) return;
+          // Hand the drag over, and re-announce the down at the new pointer's
+          // origin so the host starts a fresh stroke rather than continuing the
+          // resting pointer's.
+          this.claim(canvas as HTMLCanvasElement, pe.pointerId);
+          this.pointer = this.toStage(canvas, from.x, from.y);
+          for (const handler of this.handlers.get('pointerdown') ?? []) handler({ type: 'pointerdown' });
+          this.activeMoved = true;
         }
-        if (type === 'pointermove' && !this.activeMoved && this.activeDownAt) {
+        if (type === 'pointermove' && !this.activeMoved) {
           // 6px: past a resting finger's jitter, short of a deliberate stroke.
-          const dx = pe.clientX - this.activeDownAt.x;
-          const dy = pe.clientY - this.activeDownAt.y;
-          if (dx * dx + dy * dy > 36) this.activeMoved = true;
+          const from = this.downAt.get(pe.pointerId);
+          if (from && (pe.clientX - from.x) ** 2 + (pe.clientY - from.y) ** 2 > 36) {
+            this.activeMoved = true;
+          }
         }
-        const rect = canvas.getBoundingClientRect();
-        const sx = rect.width > 0 ? this.w / rect.width : 1;
-        const sy = rect.height > 0 ? this.h / rect.height : 1;
-        this.pointer = { x: (pe.clientX - rect.left) * sx, y: (pe.clientY - rect.top) * sy };
+        this.pointer = this.toStage(canvas, pe.clientX, pe.clientY);
         const key = type === 'pointercancel' ? 'pointerup' : type;
-        if (key === 'pointerup') this.releaseActive();
+        if (key === 'pointerup') {
+          this.downAt.delete(pe.pointerId);
+          if (pe.pointerId === this.activePointerId) this.releaseActive();
+        }
         for (const handler of this.handlers.get(key) ?? []) handler({ type: key });
       };
       canvas.addEventListener(type, fn);
@@ -418,9 +414,25 @@ export class StageShim {
     this.detach.push(() => canvas.removeEventListener('lostpointercapture', onLost));
   }
 
+  private toStage(canvas: HTMLCanvasElement | OffscreenCanvas, cx: number, cy: number): { x: number; y: number } {
+    const rect = (canvas as HTMLCanvasElement).getBoundingClientRect();
+    const sx = rect.width > 0 ? this.w / rect.width : 1;
+    const sy = rect.height > 0 ? this.h / rect.height : 1;
+    return { x: (cx - rect.left) * sx, y: (cy - rect.top) * sy };
+  }
+
+  /** Make `id` the owner, moving pointer capture with it. */
+  private claim(canvas: HTMLCanvasElement, id: number): void {
+    if (this.activePointerId !== null && this.activePointerId !== id) {
+      try { canvas.releasePointerCapture?.(this.activePointerId); } catch { /* already gone */ }
+    }
+    this.activePointerId = id;
+    this.activeMoved = false;
+    try { canvas.setPointerCapture?.(id); } catch { /* refused; lostpointercapture backstops */ }
+  }
+
   private releaseActive(): void {
     this.activePointerId = null;
-    this.activeDownAt = null;
     this.activeMoved = false;
   }
 

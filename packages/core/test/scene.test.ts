@@ -226,6 +226,40 @@ test('a palm that lands FIRST does not own the drag — the pointer that draws d
   mount.remove();
 });
 
+test('a palm that lands SECOND, before the finger moves, does not steal the drag', () => {
+  // The mirror of the palm-first case, and the one an earlier "last down wins
+  // until someone moves" rule broke outright: the finger is already down but
+  // has not started, the palm settles, and the finger's entire trace was then
+  // dropped. Ownership follows whichever pointer actually draws.
+  const { scene, mount, seen, fire } = pointerScene();
+  fire('pointerdown', 7, 10, 10);   // index finger, not moving yet
+  fire('pointerdown', 6, 80, 80);   // palm settles
+  fire('pointermove', 7, 40, 40);   // the finger starts tracing
+  fire('pointermove', 7, 70, 70);
+  fire('pointerup', 7, 70, 70);
+  // Two downs reach the host (the provisional palm, then the finger re-claiming),
+  // but the finger's moves and its up are all delivered.
+  expect(seen.filter((e) => e !== 'pointerdown')).toEqual(['pointermove', 'pointermove', 'pointerup']);
+  expect(seen[seen.length - 1]).toBe('pointerup');
+  scene.destroy();
+  mount.remove();
+});
+
+test('a tap lands even while another pointer is resting on the canvas', () => {
+  // A palm resting and the child TAPPING a dot with a finger. The steal rule
+  // cannot help here — a tap never moves — so this is carried by the down path
+  // treating a motionless owner as replaceable. Without it, `i` and `j` become
+  // untappable whenever a hand is resting on the card.
+  const { scene, mount, seen, fire } = pointerScene();
+  fire('pointerdown', 6, 80, 80);  // palm rests
+  seen.length = 0;
+  fire('pointerdown', 7, 20, 20);  // finger taps the dot
+  fire('pointerup', 7, 20, 20);
+  expect(seen).toEqual(['pointerdown', 'pointerup']);
+  scene.destroy();
+  mount.remove();
+});
+
 test('a tap still works — a motionless owner is provisional, not ignored', () => {
   // Provisional ownership must not break tap-to-draw-a-dot, which never moves.
   const { scene, mount, seen, fire } = pointerScene();
