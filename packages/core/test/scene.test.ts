@@ -189,21 +189,49 @@ function pointerScene() {
     scene.stage.on(ev, () => seen.push(ev));
   }
   const canvas = mount.querySelector('canvas')!;
-  const fire = (type: string, pointerId: number) =>
-    canvas.dispatchEvent(new PointerEvent(type, { pointerId, bubbles: true, clientX: 10, clientY: 10 }));
+  const fire = (type: string, pointerId: number, clientX = 10, clientY = 10) =>
+    canvas.dispatchEvent(new PointerEvent(type, { pointerId, bubbles: true, clientX, clientY }));
   return { scene, mount, canvas, seen, fire };
 }
 
-test('a drag follows one pointer: a second finger is ignored while the first owns it', () => {
+test('a drag follows one pointer: a second finger is ignored while the first DRAWS', () => {
   const { scene, mount, seen, fire } = pointerScene();
-  fire('pointerdown', 1);
-  fire('pointermove', 1);
-  fire('pointerdown', 2);  // second finger lands
-  fire('pointermove', 2);
-  fire('pointerup', 2);    // and lifts — must not end finger 1's stroke
-  fire('pointermove', 1);
-  fire('pointerup', 1);
+  fire('pointerdown', 1, 10, 10);
+  fire('pointermove', 1, 40, 40);  // finger 1 is really drawing
+  fire('pointerdown', 2, 90, 90);  // second finger lands
+  fire('pointermove', 2, 95, 95);
+  fire('pointerup', 2, 95, 95);    // and lifts — must not end finger 1's stroke
+  fire('pointermove', 1, 60, 60);
+  fire('pointerup', 1, 60, 60);
   expect(seen).toEqual(['pointerdown', 'pointermove', 'pointermove', 'pointerup']);
+  scene.destroy();
+  mount.remove();
+});
+
+test('a palm that lands FIRST does not own the drag — the pointer that draws does', () => {
+  // The palm-first case. Ownership is provisional until the owner moves, so a
+  // resting pointer is displaced by one that actually traces. Without this the
+  // palm owns the canvas, every event from the drawing finger is dropped with
+  // no ink and no message, and the palm's own jitter gets scored as the stroke.
+  const { scene, mount, seen, fire } = pointerScene();
+  fire('pointerdown', 6, 80, 80);   // palm
+  fire('pointermove', 6, 81, 80);   // ...wobbling, but not drawing
+  fire('pointerdown', 7, 10, 10);   // index finger arrives and takes over
+  fire('pointermove', 7, 40, 40);
+  fire('pointermove', 7, 70, 70);
+  fire('pointerup', 7, 70, 70);
+  // The finger's whole stroke is delivered; the palm contributed one move.
+  expect(seen).toEqual(['pointerdown', 'pointermove', 'pointerdown', 'pointermove', 'pointermove', 'pointerup']);
+  scene.destroy();
+  mount.remove();
+});
+
+test('a tap still works — a motionless owner is provisional, not ignored', () => {
+  // Provisional ownership must not break tap-to-draw-a-dot, which never moves.
+  const { scene, mount, seen, fire } = pointerScene();
+  fire('pointerdown', 1, 50, 50);
+  fire('pointerup', 1, 50, 50);
+  expect(seen).toEqual(['pointerdown', 'pointerup']);
   scene.destroy();
   mount.remove();
 });
@@ -215,6 +243,31 @@ test('the owner lifting frees the canvas for the next pointer', () => {
   fire('pointerdown', 2);
   fire('pointerup', 2);
   expect(seen).toEqual(['pointerdown', 'pointerup', 'pointerdown', 'pointerup']);
+  scene.destroy();
+  mount.remove();
+});
+
+test('the canvas asks to capture the owning pointer', () => {
+  // Scope, stated plainly: this pins that we CALL setPointerCapture. It does
+  // not — cannot — prove the browser then delivers pointerup off-element,
+  // because Chromium silently refuses capture for synthetic PointerEvents, so
+  // no test at this layer can observe real capture. That half was verified with
+  // trusted mouse input in a browser (press inside, release far outside:
+  // gotpointercapture -> pointerup -> lostpointercapture, canvas stayed live).
+  //
+  // Without this test, deleting the capture call leaves the suite fully green —
+  // measured — while reintroducing a permanently dead canvas for mouse users.
+  const mount = document.createElement('div');
+  document.body.appendChild(mount);
+  const scene = buildScene(
+    { schema: 'glamour/v0.1', canvas: { w: 100, h: 100 }, nodes: [] } as GlamDoc,
+    mount,
+  );
+  const canvas = mount.querySelector('canvas')!;
+  const captured: number[] = [];
+  canvas.setPointerCapture = (id: number) => { captured.push(id); };
+  canvas.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 42, bubbles: true, clientX: 5, clientY: 5 }));
+  expect(captured).toEqual([42]);
   scene.destroy();
   mount.remove();
 });

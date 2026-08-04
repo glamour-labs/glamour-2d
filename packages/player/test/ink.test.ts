@@ -256,6 +256,35 @@ test('a stationary tap far from the stroke start is ignored, not spent', () => {
   expect(strokes[0].match!.startOk).toBe(true);
 });
 
+test('a motionless tap ON a long stroke\'s start is an accident, not an attempt', () => {
+  // Touch down, hesitate, lift — right where you were about to start from. The
+  // most ordinary accidental press there is, and an earlier guard shaped as
+  // "unmoved AND away from the start" let it straight through, where it cost
+  // the child every stroke already drawn.
+  player = renderGlamour(dotDoc, mount);
+  const strokes: GlamStrokeEvent[] = [];
+  player.onStroke((e) => strokes.push(e));
+  const fire = pointerForTest(player);
+  fire('down', 100, 40); fire('up', 100, 40); // exactly the stroke-1 start
+  expect(strokes.length).toBe(0);
+  // The stroke was not spent: the real attempt still lands on stroke 1.
+  fire('down', 100, 40); fire('move', 100, 90); fire('move', 100, 140); fire('up', 100, 140);
+  expect(strokes.length).toBe(1);
+  expect(strokes[0].index).toBe(0);
+  expect(strokes[0].match!.score).toBeGreaterThanOrEqual(0.6);
+});
+
+test('a single pixel of jitter does not turn an accident into an attempt', () => {
+  // A resting finger never holds still to sub-pixel precision, so a guard keyed
+  // on "zero pointermove events" is defeated by the very thing it targets.
+  player = renderGlamour(dotDoc, mount);
+  const strokes: GlamStrokeEvent[] = [];
+  player.onStroke((e) => strokes.push(e));
+  const fire = pointerForTest(player);
+  fire('down', 20, 190); fire('move', 21, 190); fire('up', 21, 190);
+  expect(strokes.length).toBe(0);
+});
+
 test('a short but MOVED stroke is still a real attempt, and is scored', () => {
   // Only an unmoved sample is discarded. A deliberate small scribble in the
   // wrong place must still be judged - silently swallowing it would be its own
@@ -264,7 +293,8 @@ test('a short but MOVED stroke is still a real attempt, and is scored', () => {
   const strokes: GlamStrokeEvent[] = [];
   player.onStroke((e) => strokes.push(e));
   const fire = pointerForTest(player);
-  fire('down', 20, 190); fire('move', 26, 190); fire('up', 32, 190);
+  // 40px of ink: well past half the 26px tolerance, so it reads as deliberate.
+  fire('down', 20, 190); fire('move', 40, 190); fire('move', 60, 190); fire('up', 60, 190);
   expect(strokes.length).toBe(1);
   expect(strokes[0].match!.startOk).toBe(false);
 });

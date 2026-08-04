@@ -223,22 +223,37 @@ export function renderGlamour(
       const line = scene.byId[s.into];
       if (!line) return;
       const points = [...(line.points() as number[])];
-      // A press that never moved AND never landed near where this stroke begins
-      // is not an attempt at it — it is a resting finger, a mis-tap, a dropped
-      // touch. Emitting it costs the host a pen-stroke it can never hand back,
-      // so one stray touch can throw away every stroke already drawn.
+      // Is this an attempt at the stroke, or an accident? It matters because a
+      // pen-up spends a stroke the host can never hand back, so a stray touch
+      // can cost every stroke already drawn.
       //
-      // Deliberately narrow. It needs a `match` (so the runtime knows where the
-      // stroke starts), it only fires for a single unmoved sample, and it keeps
-      // a tap that IS on the start — which is exactly how a dot is drawn, and
-      // the case a blunter "too short to be real" rule got wrong.
-      if (s.match && points.length <= 2) {
-        const dx = points[0] - s.match.target[0];
-        const dy = points[1] - s.match.target[1];
-        if (!(dx * dx + dy * dy <= s.match.tolerance * s.match.tolerance)) {
-          line.points([]);
-          scene.layer.draw();
-          return; // not a stroke: no event, and strokeIdx does not advance
+      // The discriminator is NOT where the press landed, and NOT whether it
+      // moved. Two earlier shapes of this guard failed on exactly those:
+      //   - "unmoved and away from the start" is character-for-character
+      //     `!startOk`, so it let through a motionless tap ON the start — the
+      //     most ordinary accidental press there is (touch down, hesitate,
+      //     lift) — and that press then destroyed the letter.
+      //   - "unmoved" meant literally zero pointermove events, so one pixel of
+      //     jitter defeated it, and a resting finger always jitters.
+      //
+      // What actually separates them is the TARGET. A press that barely moved
+      // is a legitimate attempt only when the thing being traced is itself
+      // barely longer than the press — the dot on an `i`, where a tap covers
+      // the whole target. Against a full-length stroke the same press covers
+      // almost none of it and cannot be anything but an accident. So: ask the
+      // scorer.
+      if (s.match) {
+        let inked = 0;
+        for (let k = 2; k < points.length; k += 2) {
+          inked += Math.hypot(points[k] - points[k - 2], points[k + 1] - points[k - 1]);
+        }
+        if (inked < s.match.tolerance / 2) {
+          const covers = traceMatch(s.match.target, points, s.match.tolerance).coverage;
+          if (covers < 0.5) {
+            line.points([]);
+            scene.layer.draw();
+            return; // not an attempt: no event, and strokeIdx does not advance
+          }
         }
       }
       const match = s.match ? traceMatch(s.match.target, points, s.match.tolerance) : undefined;
