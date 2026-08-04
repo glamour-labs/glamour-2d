@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Alphabet Tracing — Glamour</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Ctext y=%2714%27 font-size=%2714%27%3E%E2%9C%8F%EF%B8%8F%3C/text%3E%3C/svg%3E" />
     <style>
       /* The page wears the active worksheet's own palette, so switching
          aesthetic changes the whole room, not just the card. */
@@ -183,7 +184,13 @@
          this on a phone should land on the letter, not on a wall of 26 buttons;
          the rail becomes a one-row horizontal strip underneath it. */
       @media (max-width: 1000px) {
-        .body { display: flex; flex-direction: column; }
+        /* `align-items: start` is right for the desktop 3-column grid (cards
+           should not stretch to the tallest sibling) but it is a CROSS-axis
+           rule, so once this becomes a column flex the same declaration stops
+           the children filling the width — the 26-button rail then sizes to its
+           own 1297px content and drags the whole page into horizontal scroll.
+           A screenshot does not show it; only scrollWidth does. */
+        .body { display: flex; flex-direction: column; align-items: stretch; }
         .stage-card { order: 1; }
         .rail { order: 2; }
         .body > aside:last-child { order: 3; }

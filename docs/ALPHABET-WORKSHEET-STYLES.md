@@ -339,6 +339,11 @@ Departures worth naming:
 - **Static direction arrows appear in HARD mode only.** In EASY they duplicate the puck,
   and on a retraced stem (`h m n r b p`) they actively contradict it — showing "down" and
   "up" on the same line at the same time.
+- **The paper worksheet layers, rather than substitutes.** The spec offers the dotted skeleton
+  as an *alternative* rendering to the solid ghost; we draw a thin (0.045H) dotted centreline
+  *on top of* the full-weight solid ghost. Stacking two 0.14H strokes just read as a dashed
+  letter — the ghost disappeared into the dashes. Layering keeps "cover the ghost" as the win
+  signal while still showing the path through the middle.
 - **The card trims its own bottom.** A letter with no descender would otherwise carry an
   empty band under it. The trim moves only the bottom edge; `yTop` and the baseline stay
   fixed, so switching letters never shifts the writing lines.
