@@ -114,6 +114,17 @@ more, all demonstrated live, all fixed:
    the fold, on an element with `touch-action: none`. Now measured clean at eight
    viewports, with a side-by-side layout for short ones.
 
+**Fourth pass: NO-SHIP.** The pointer fix from the adversarial round stranded
+`activePointerId`: a mouse gets no implicit pointer capture, so pressing inside the canvas
+and releasing outside delivered no `pointerup` at all and the canvas went **permanently
+dead** — worse than the two-finger bug it fixed, and in `packages/core`, so every host.
+Fixed with `setPointerCapture` plus a `lostpointercapture` backstop.
+
+The same pass proved that guard had **zero coverage** — deleting it left 290/290 green,
+because the three new tests drove the player's `__pointer` hook, which bypasses
+`StageShim` entirely. Round 2's lesson, unlearned. Now covered by four tests at the right
+layer, driving real DOM PointerEvents, mutation-checked.
+
 **Lessons worth keeping:**
 
 - A guard whose exceptions *are* the bug is worse than no guard, because it reads as
@@ -137,6 +148,15 @@ more, all demonstrated live, all fixed:
 - Both remaining scoring trade-offs were settled by measuring the corpus (172 strokes)
   rather than arguing: tolerance at 0.75×pen, and the single `card/lower/b` residual left
   in place because failing a child who *did* trace the letter is the worse error.
+- **A test at the wrong layer is not coverage.** Twice, tests written for a fix exercised a
+  different layer than the fix. The check that catches it is cheap and was skipped both
+  times: delete the fix, run the tests, watch them go red. If they don't, they aren't
+  testing it.
+- Sweep with the WORST case, not a representative one. The viewport sweep used `A`;
+  descender letters are a whole band taller and are what actually sets the constraint.
+  Re-measuring with `j` moved the answer.
+- Five review rounds, five that found something. The find rate did not decline the way it
+  should if the code were converging — worth knowing before trusting a single green pass.
 
 ## Deliberately not done
 
