@@ -10,7 +10,7 @@
 
 import { createServer } from 'node:http';
 import { createReadStream, statSync } from 'node:fs';
-import { extname, join, normalize, resolve } from 'node:path';
+import { extname, join, relative, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(fileURLToPath(import.meta.url), '../..');
@@ -30,10 +30,14 @@ const TYPES = {
 
 createServer((req, res) => {
   const url = decodeURIComponent((req.url || '/').split('?')[0]);
-  // normalize() collapses `..`, and the prefix check keeps a crafted path from
-  // escaping the repo root.
-  let file = normalize(join(ROOT, url));
-  if (!file.startsWith(ROOT)) {
+  // Containment is checked with `relative`, not a string prefix. `startsWith(ROOT)`
+  // looks equivalent and is not: it also admits any SIBLING whose path merely begins
+  // with the root's characters — `/../<root-basename>-notes/secret.txt` resolves
+  // outside the repo and passes a prefix test. A relative path that neither starts
+  // with `..` nor is absolute is inside, with no such edge.
+  let file = resolve(ROOT, '.' + (url.startsWith('/') ? url : `/${url}`));
+  const rel = relative(ROOT, file);
+  if (rel !== '' && (rel.startsWith('..') || isAbsolute(rel))) {
     res.writeHead(403).end('forbidden');
     return;
   }
@@ -54,7 +58,10 @@ createServer((req, res) => {
     'Cache-Control': 'no-store',
   });
   createReadStream(file).pipe(res);
-}).listen(PORT, () => {
+// Loopback only. This serves the whole repository with no auth; binding every
+// interface would expose it to the LAN for the sake of a convenience nobody asked
+// for. Set HOST to override deliberately.
+}).listen(PORT, process.env.HOST || '127.0.0.1', () => {
   console.log(`glamour static server → http://localhost:${PORT}/`);
   console.log(`  alphabet game       → http://localhost:${PORT}/examples/alphabet/`);
   console.log(`  sketch playground   → http://localhost:${PORT}/examples/playground/`);

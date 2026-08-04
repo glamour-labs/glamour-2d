@@ -1,5 +1,12 @@
 # browser-qc · examples/alphabet · rollup: PARTIAL
 
+> **Ran against commit `c144c48`.** Findings 1 (free-write dot stroke), 2 (responsive
+> overflow) and 9 (favicon) describe code that has since been fixed — see `5fce8e4` and
+> `0f11371`. Finding 6's *verdict* (stray taps are handled) still holds, but its stated
+> mechanism does not: the `inked < 14` guard it credits was the cause of finding 1 and has
+> been removed; the property is now carried by the scorer. Kept as-written rather than
+> edited, because the evidence is the point.
+
 Server started by this QC run (`node scripts/serve.mjs 4399`, per caller instruction — no
 server was running beforehand). cwd verified against the worktree via
 `verify-server-cwd.sh` before navigating. Player bundle confirmed fresh (no `packages/{core,player}/src`
