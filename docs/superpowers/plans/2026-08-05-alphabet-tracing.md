@@ -125,6 +125,21 @@ because the three new tests drove the player's `__pointer` hook, which bypasses
 `StageShim` entirely. Round 2's lesson, unlearned. Now covered by four tests at the right
 layer, driving real DOM PointerEvents, mutation-checked.
 
+**Adversarial pass on the shared runtime** (`scene.ts` + `player.ts`) — the certifier's
+recommendation after the dead-canvas defect walked in there. Three more:
+
+1. The accident guard was `!startOk` in disguise. "Unmoved and further than tolerance from
+   the start" is character-for-character the definition of `!startOk`, so it fired only for
+   presses *away* from the start and let through a motionless tap *on* it — touch down,
+   hesitate, lift — which then destroyed the letter. It was also defeated by one pixel of
+   jitter. Re-derived instead of patched: a barely-moved press is a legitimate attempt only
+   when the target is itself barely longer than the press. Ask the scorer.
+2. A palm landing FIRST owned the canvas — the previous fix had only handled palm-second.
+3. `setPointerCapture` had no test coverage; deleting it left the suite green.
+
+Then a self-check caught that fix #2's rule broke the **mirror** case, so ownership now
+follows whichever pointer draws rather than either down-order.
+
 **Lessons worth keeping:**
 
 - A guard whose exceptions *are* the bug is worse than no guard, because it reads as
@@ -155,8 +170,15 @@ layer, driving real DOM PointerEvents, mutation-checked.
 - Sweep with the WORST case, not a representative one. The viewport sweep used `A`;
   descender letters are a whole band taller and are what actually sets the constraint.
   Re-measuring with `j` moved the answer.
-- Five review rounds, five that found something. The find rate did not decline the way it
-  should if the code were converging — worth knowing before trusting a single green pass.
+- Six review rounds, six that found something. Three of those defects were introduced by
+  the previous round's fix. The find rate did not decline the way it should if the code
+  were converging — worth knowing before trusting any single green pass.
+- When a guard keeps needing its edges patched, the shape is wrong. Both the accident guard
+  and the pointer-ownership rule were fixed twice at the boundary before being re-derived
+  from what actually distinguishes the cases — and the re-derivation was shorter than the
+  patches.
+- Mutation-check each half of a rule separately. Removing one half of the ownership rule
+  left every test green, which is how a load-bearing branch turned out to be uncovered.
 
 ## Deliberately not done
 
