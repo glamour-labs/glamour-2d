@@ -31,7 +31,7 @@
 
 import { flattenStroke, resample, pathLength, endTangent } from './geom.mjs';
 import { glyphFor } from './glyphs.mjs';
-import { THEMES, layout, CANVAS, canvasHeight } from './themes.mjs';
+import { THEMES, layout, CANVAS, bottomLayout } from './themes.mjs';
 
 const r1 = (v) => Number(v.toFixed(1));
 
@@ -54,10 +54,37 @@ export function placeGlyph(letter, upper, theme) {
   // 0.03 band units ≈ 4.5px of curve sampling — fine enough that a circle has
   // no visible facets at this pen weight, coarse enough to keep files small.
   const step = 0.03;
-  return glyph.strokes.map((segs) => ({
-    draw: px(flattenStroke(segs, step)),
-    shape: px(flattenStroke(segs.filter((s) => !s.retrace), step)),
-  }));
+  return glyph.strokes.map((segs) => {
+    // The outline as CONTIGUOUS PIECES, split wherever a retrace was removed.
+    //
+    // Dropping the retrace segments is not enough on its own: the remaining
+    // points are still one polyline, so it bridges the gap and walks the stem a
+    // second time. Solid ink hides that, but a DASHED guide does not — the two
+    // passes interleave and the stem renders as a solid blue line while the
+    // rest of the letter is dashed (`p`, `b`, `h`, `m`, `n`, `r`).
+    const pieces = [];
+    let cur = [];
+    for (const seg of segs) {
+      if (seg.retrace) {
+        if (cur.length) { pieces.push(cur); cur = []; }
+        continue;
+      }
+      const pts = flattenStroke([seg], step);
+      if (cur.length) {
+        const [lx, ly] = cur[cur.length - 1];
+        if (Math.hypot(pts[0][0] - lx, pts[0][1] - ly) < step * 0.5) pts.shift();
+        cur.push(...pts);
+      } else {
+        cur = pts;
+      }
+    }
+    if (cur.length) pieces.push(cur);
+    return {
+      draw: px(flattenStroke(segs, step)),
+      shape: px(flattenStroke(segs.filter((s) => !s.retrace), step)),
+      pieces: pieces.map(px),
+    };
+  });
 }
 
 /** A pointing triangle whose local geometry points DOWN at rotation 0 — the
@@ -113,69 +140,6 @@ function dedupe(flat, minGap) {
   return out.length >= 4 ? out : flat;
 }
 
-/** Point and tangent at fraction `t` along a flat polyline. */
-function atFraction(flat, t) {
-  const total = pathLength(flat);
-  const want = total * t;
-  let d = 0;
-  for (let i = 2; i < flat.length; i += 2) {
-    const seg = Math.hypot(flat[i] - flat[i - 2], flat[i + 1] - flat[i - 1]);
-    if (d + seg >= want || i === flat.length - 2) {
-      const f = seg === 0 ? 0 : (want - d) / seg;
-      return {
-        x: flat[i - 2] + (flat[i] - flat[i - 2]) * f,
-        y: flat[i - 1] + (flat[i + 1] - flat[i - 1]) * f,
-        deg: (Math.atan2(flat[i + 1] - flat[i - 1], flat[i] - flat[i - 2]) * 180) / Math.PI,
-      };
-    }
-    d += seg;
-  }
-  return { x: flat[0], y: flat[1], deg: 0 };
-}
-
-/**
- * Where direction arrows go along one stroke: always ~40% in (worksheets put
- * the head where direction needs confirming, not where the pencil stops), plus
- * one shortly after any turn sharper than 60°, which is what makes `Z`, `W`
- * and the `h` arch readable rather than ambiguous. Two is the ceiling.
- */
-function arrowAnchors(flat) {
-  const anchors = [0.4];
-  const total = pathLength(flat);
-  let d = 0;
-  let prevDeg = null;
-  for (let i = 2; i < flat.length; i += 2) {
-    const dx = flat[i] - flat[i - 2];
-    const dy = flat[i + 1] - flat[i - 1];
-    const seg = Math.hypot(dx, dy);
-    if (seg > 0.5) {
-      const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
-      if (prevDeg !== null) {
-        let turn = Math.abs(((deg - prevDeg + 540) % 360) - 180);
-        if (turn > 60) {
-          const t = (d + seg) / total + 0.10;
-          // Past 0.8 the corner head crowds the end arrowhead — `L` and `Z`
-          // ended up with two triangles a few pixels apart on the final bar.
-          if (t <= 0.8 && anchors.every((a) => Math.abs(a - t) > 0.18)) anchors.push(t);
-        }
-      }
-      prevDeg = deg;
-    }
-    d += seg;
-  }
-  // Two heads is the ceiling. `W` generates four corner candidates and a page
-  // of arrowheads stops reading as direction and starts reading as decoration.
-  return anchors.slice(0, 2).sort((a, b) => a - b);
-}
-
-/**
- * Approximate top-left placement for a numeral so it lands optically centred
- * on (cx, cy). Text nodes anchor at the top-left of their raster box, and the
- * format exposes no measure hook, so this is a calibrated estimate for digits
- * in the default sans: ~0.56em wide, cap centre ~0.66em below the box top.
- */
-const centreDigit = (cx, cy, size) => ({ x: r1(cx - size * 0.28), y: r1(cy - size * 0.66) });
-
 export function buildDoc({ letter, upper, mode, theme: themeId }) {
   const theme = THEMES[themeId];
   if (!theme) throw new Error(`unknown theme: ${themeId}`);
@@ -184,16 +148,8 @@ export function buildDoc({ letter, upper, mode, theme: themeId }) {
   const strokes = placeGlyph(letter, upper, theme);
   const nodes = [];
 
-  // The descender rule is noise unless the glyph genuinely lives in that band.
-  // `Q`'s tail only nicks it, and drawing a full fourth rule for that reads as
-  // a mistake; `g j p q y` drop far enough to need the floor. The same test
-  // sizes the card, so a letter with no tail carries no empty band either.
-  const descendThreshold = L.yBase + theme.bandDesc * 0.4;
-  const usesDescender = strokes.some((s) => {
-    for (let i = 1; i < s.shape.length; i += 2) if (s.shape[i] > descendThreshold) return true;
-    return false;
-  });
-  const H = canvasHeight(theme, usesDescender);
+  const bottom = bottomLayout(theme);
+  const H = bottom.height;
 
   // ---- the card ------------------------------------------------------------
   if (theme.panel) {
@@ -216,10 +172,12 @@ export function buildDoc({ letter, upper, mode, theme: themeId }) {
     stroke: spec.color, strokeWidth: spec.width,
     ...(spec.dash ? { dash: spec.dash } : {}),
   });
+  // Exactly three, for every letter. A descender hangs below the baseline with
+  // no line to catch it — drawing a fourth rule only for `g j p q y` made those
+  // cards read as a different worksheet from the rest of the alphabet.
   rule('ruleTop', L.yTop, theme.rules.top);
   rule('ruleMid', L.yMid, theme.rules.mid);
   rule('ruleBase', L.yBase, theme.rules.base);
-  if (usesDescender) rule('ruleDesc', L.yDesc, theme.rules.desc);
 
   // ---- the ghost / channel letter -----------------------------------------
   // Theme B's "hollow channel" is two stacked polylines: a wider outline colour
@@ -230,15 +188,15 @@ export function buildDoc({ letter, upper, mode, theme: themeId }) {
   // stroke 2's outline across stroke 1's fill, so the `A` crossbar would look
   // like it had been laid on top of the diagonals instead of merging with them.
   if (theme.trackOutline) {
-    strokes.forEach((s, i) => nodes.push({
-      id: `trackEdge${i + 1}`, type: 'stroke', x: 0, y: 0, points: s.shape,
+    strokes.forEach((s, i) => s.pieces.forEach((piece, k) => nodes.push({
+      id: `trackEdge${i + 1}${k ? `_${k}` : ''}`, type: 'stroke', x: 0, y: 0, points: piece,
       stroke: theme.trackOutline, strokeWidth: L.pen + theme.trackOutlineWidth * 2, tension: 0,
-    }));
+    })));
   }
-  strokes.forEach((s, i) => nodes.push({
-    id: `track${i + 1}`, type: 'stroke', x: 0, y: 0, points: s.shape,
+  strokes.forEach((s, i) => s.pieces.forEach((piece, k) => nodes.push({
+    id: `track${i + 1}${k ? `_${k}` : ''}`, type: 'stroke', x: 0, y: 0, points: piece,
     stroke: theme.track, strokeWidth: L.pen, tension: 0,
-  }));
+  })));
 
   // ---- per-stroke guides ---------------------------------------------------
   // Only stroke 1's guides are lit at rest; the host reveals each next group as
@@ -248,30 +206,21 @@ export function buildDoc({ letter, upper, mode, theme: themeId }) {
     const on = i === 0 ? 1 : 0;
     const guideW = Math.max(2, Math.round(L.unit * theme.guideWidthRatio));
 
-    nodes.push({
-      id: `g${n}_dash`, type: 'stroke', x: 0, y: 0, points: s.shape,
+    s.pieces.forEach((piece, k) => nodes.push({
+      id: `g${n}_dash${k ? `_${k}` : ''}`, type: 'stroke', x: 0, y: 0, points: piece,
       stroke: theme.guide, strokeWidth: guideW, dash: theme.guideDash, tension: 0, opacity: on,
-    });
+    }));
 
+    // ONE arrowhead per stroke, at the end of the dashed path and continuous
+    // with it — so the guide reads as a single line with a point on it.
+    //
+    // There used to be extra heads part-way along, offset perpendicular so they
+    // floated beside the letter. They looked like a detached arrowhead with no
+    // line attached, and they said nothing the dashed path was not already
+    // saying. Removed rather than restyled.
     const arrowSize = L.pen * theme.arrowRatio;
-    // Static direction arrows are HARD-mode furniture only. In EASY the puck
-    // travels the path with the arrow already rotating to the tangent, so a
-    // second set of frozen arrows is redundant clutter — and on a retraced
-    // stem it actively contradicts the puck ("down" and "up" at once).
-    if (!easy) {
-      arrowAnchors(s.draw).forEach((t, k) => {
-        const p = atFraction(s.draw, t);
-        // On paper the head sits beside the pencil line; in the fat app channel
-        // it belongs inside the channel, where there is room for it.
-        const off = theme.trackOutline ? 0 : L.pen * 1.25;
-        const nx = Math.cos(((p.deg + 90) * Math.PI) / 180) * off;
-        const ny = Math.sin(((p.deg + 90) * Math.PI) / 180) * off;
-        nodes.push(arrowHead(`g${n}_arr${k}`, p.x + nx, p.y + ny, p.deg - 90, arrowSize, theme.arrow, on));
-      });
-    }
-
     const tip = { x: s.draw[s.draw.length - 2], y: s.draw[s.draw.length - 1] };
-    nodes.push(arrowHead(`g${n}_end`, tip.x, tip.y, endTangent(s.draw) - 90, arrowSize * 1.05, theme.arrow, on));
+    nodes.push(arrowHead(`g${n}_end`, tip.x, tip.y, endTangent(s.draw) - 90, arrowSize, theme.arrow, on));
 
     nodes.push({
       id: `ink${n}`, type: 'stroke', x: 0, y: 0, points: [],
@@ -286,47 +235,33 @@ export function buildDoc({ letter, upper, mode, theme: themeId }) {
     const on = i === 0 ? 1 : 0;
     const sx = s.draw[0];
     const sy = s.draw[1];
-    const dotR = Math.max(11, (L.pen * theme.startDotRatio) / 2);
-    const numSize = Math.round(dotR * 1.25);
+    // The bead marks a spot; the puck is a touch target. Different jobs, so
+    // they are sized independently rather than one being a scale of the other.
+    const beadR = Math.max(5, (L.pen * theme.startDotRatio) / 2);
+    const puckR = Math.max(17, L.pen * 1.15);
 
     if (easy) {
-      // The draggable puck. The player moves it to the ink tip and rotates the
-      // arrow to the path tangent, so both must exist as separate nodes.
+      // The draggable puck: a filled blue disc with a white arrow inside,
+      // pointing the way. It is the only thing on the card the child touches.
       nodes.push({
-        id: `g${n}_curC`, type: 'circle', x: r1(sx), y: r1(sy), r: r1(dotR * 1.05),
-        fill: theme.handle, stroke: theme.handleRing, strokeWidth: 3, opacity: on,
+        id: `g${n}_curC`, type: 'circle', x: r1(sx), y: r1(sy), r: r1(puckR),
+        fill: theme.handle, opacity: on,
       });
       nodes.push({
         id: `g${n}_curA`, type: 'stroke', x: r1(sx), y: r1(sy),
-        points: [-2.6, -dotR * 0.5, 2.6, -dotR * 0.5, 2.6, 0, dotR * 0.46, 0, 0, dotR * 0.62,
-          -dotR * 0.46, 0, -2.6, 0],
+        points: [-puckR * 0.16, -puckR * 0.46, puckR * 0.16, -puckR * 0.46, puckR * 0.16, 0,
+          puckR * 0.44, 0, 0, puckR * 0.56, -puckR * 0.44, 0, -puckR * 0.16, 0],
         closed: true, fill: theme.handleArrow, rotation: 0, opacity: on,
       });
-      // A static numeral beside the start, so multi-stroke order stays legible
-      // once the puck has moved away. Single-stroke letters don't get one — the
-      // puck already says "start here", and a lone "1" is just clutter.
-      //
-      // Offset HORIZONTALLY, away from the glyph's centre. Stacking it above the
-      // puck put it straight through the "Aa" label on every letter whose first
-      // stroke starts at the top-left (H, M, N, V, W, …).
-      if (strokes.length > 1) {
-        const side = sx < CANVAS.w / 2 ? -1 : 1;
-        const c = centreDigit(sx + side * dotR * 2.3, sy, numSize);
-        nodes.push({
-          id: `g${n}_num`, type: 'text', x: c.x, y: c.y, text: String(n),
-          size: numSize, fill: theme.numeralOutside, fontStyle: 'bold', opacity: on,
-        });
-      }
     } else {
+      // Free write: a small bead where the stroke begins, the same blue as the
+      // path it starts. Deliberately no numeral — the guide only ever shows one
+      // stroke at a time, so there is no sequence to disambiguate, and a digit
+      // inside the bead just makes it a badge to read instead of a place to
+      // put your finger.
       nodes.push({
-        id: `g${n}_dot`, type: 'circle', x: r1(sx), y: r1(sy), r: r1(dotR),
-        fill: theme.startDot, stroke: theme.handleRing, strokeWidth: theme.trackOutline ? 3 : 0,
-        opacity: on,
-      });
-      const c = centreDigit(sx, sy, numSize);
-      nodes.push({
-        id: `g${n}_num`, type: 'text', x: c.x, y: c.y, text: String(n),
-        size: numSize, fill: theme.numeral, fontStyle: 'bold', opacity: on,
+        id: `g${n}_dot`, type: 'circle', x: r1(sx), y: r1(sy), r: r1(beadR),
+        fill: theme.startDot, opacity: on,
       });
     }
   });
@@ -352,7 +287,7 @@ export function buildDoc({ letter, upper, mode, theme: themeId }) {
   const caseWord = upper ? 'Uppercase' : 'Lowercase';
   const strokeWord = strokes.length === 1 ? '1 stroke' : `${strokes.length} strokes`;
   nodes.push({
-    id: 'caption', type: 'text', x: theme.caption.x, y: H - theme.caption.fromBottom,
+    id: 'caption', type: 'text', x: theme.caption.x, y: r1(bottom.captionTop),
     text: `${caseWord} ${upper ? letter.toUpperCase() : letter.toLowerCase()}  ·  ${strokeWord}  ·  ${easy ? 'Guided' : 'Free write'}`,
     size: theme.caption.size, fill: theme.caption.color,
   });

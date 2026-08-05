@@ -80,7 +80,7 @@ export const UPPER = {
   ] },
   K: { w: 1.18, strokes: [
     [line(0.10, 0, 0.10, 2)],
-    [line(1.10, 0, 0.30, 1.05), line(0.30, 1.05, 1.16, 2)],
+    [line(1.10, 0, 0.12, 1.05), line(0.12, 1.05, 1.16, 2)],
   ] },
   L: { w: 1.00, strokes: [
     [line(0.10, 0, 0.10, 2), line(0.10, 2, 0.98, 2)],
@@ -94,7 +94,10 @@ export const UPPER = {
     [line(0.10, 0, 1.12, 1.86), line(1.12, 1.86, 1.12, 0)],
   ] },
   O: { w: 1.72, strokes: [
-    [arc(0.86, 1.00, 0.84, 1.00, -90, -450)],
+    // Starts right of top (≈1 o'clock), as ZB's diagram shows and as `C` does —
+    // not at 12 o'clock, which put the start bead and first arrow in the wrong
+    // place even though the sweep was correct.
+    [arc(0.86, 1.00, 0.84, 1.00, -60, -420)],
   ] },
   P: { w: 1.12, strokes: [
     [line(0.10, 0, 0.10, 2)],
@@ -106,7 +109,7 @@ export const UPPER = {
   ] },
   R: { w: 1.18, strokes: [
     [line(0.10, 0, 0.10, 2)],
-    [arc(0.10, 0.52, 0.86, 0.52, -90, 90), line(0.10, 1.04, 0.34, 1.04), line(0.34, 1.04, 1.16, 2)],
+    [arc(0.10, 0.52, 0.86, 0.52, -90, 90), line(0.10, 1.04, 1.16, 2)],
   ] },
   S: { w: 1.30, strokes: [
     [
@@ -143,8 +146,15 @@ export const UPPER = {
 
 export const LOWER = {
   a: { w: 0.92, strokes: [
-    [arc(0.46, 1.50, 0.44, 0.50, -30, -390)],
-    [line(0.90, 1.02, 0.90, 2)],
+    // One stroke: the bowl closes, and the pen carries straight on down the
+    // right side. The bridge from where the bowl closes to the top of the stem
+    // is marked `retrace` so it stays in the path the finger follows without
+    // being painted — the rendered `a` is unchanged, the motion is ZB's.
+    [
+      arc(0.46, 1.50, 0.44, 0.50, -30, -390),
+      retrace(line(0.841, 1.25, 0.90, 1.02)),
+      line(0.90, 1.02, 0.90, 2),
+    ],
   ] },
   b: { w: 0.92, strokes: [
     [
@@ -157,8 +167,15 @@ export const LOWER = {
     [arc(0.50, 1.50, 0.48, 0.50, -50, -310)],
   ] },
   d: { w: 0.94, strokes: [
-    [arc(0.46, 1.50, 0.44, 0.50, -30, -390)],
-    [line(0.90, 0, 0.90, 2)],
+    // ZB: circle, then "push up to the top line, pull down". The push-up is a
+    // real part of the motion and the code had no trace of it — the stem simply
+    // started at the top and went down.
+    [
+      arc(0.46, 1.50, 0.44, 0.50, -30, -390),
+      retrace(line(0.841, 1.25, 0.90, 1.02)),
+      retrace(line(0.90, 1.02, 0.90, 0)),
+      line(0.90, 0, 0.90, 2),
+    ],
   ] },
   e: { w: 1.00, strokes: [
     [line(0.04, 1.52, 0.96, 1.52), arc(0.50, 1.50, 0.46, 0.50, 2.5, -296)],
@@ -168,8 +185,12 @@ export const LOWER = {
     [line(0.02, 1.00, 0.80, 1.00)],
   ] },
   g: { w: 0.94, strokes: [
-    [arc(0.46, 1.50, 0.44, 0.50, -30, -390)],
-    [line(0.90, 1.02, 0.90, 2.52), arc(0.56, 2.52, 0.34, 0.46, 0, 152)],
+    [
+      arc(0.46, 1.50, 0.44, 0.50, -30, -390),
+      retrace(line(0.841, 1.25, 0.90, 1.02)),
+      line(0.90, 1.02, 0.90, 2.52),
+      arc(0.56, 2.52, 0.34, 0.46, 0, 152),
+    ],
   ] },
   h: { w: 0.92, strokes: [
     [
@@ -183,9 +204,11 @@ export const LOWER = {
     [line(0.20, 1.00, 0.20, 2)],
     dot(0.20, 0.50),
   ] },
-  j: { w: 0.56, strokes: [
-    [line(0.34, 1.00, 0.34, 2.52), arc(0.05, 2.52, 0.29, 0.46, 0, 158)],
-    dot(0.34, 0.50),
+  j: { w: 0.62, strokes: [
+    // Shifted right by 0.24: the hook used to reach x = -0.22, outside the
+    // glyph's own 0..w box, so every `j` sat off-centre on its card.
+    [line(0.58, 1.00, 0.58, 2.52), arc(0.29, 2.52, 0.29, 0.46, 0, 158)],
+    dot(0.58, 0.50),
   ] },
   k: { w: 0.94, strokes: [
     [line(0.10, 0, 0.10, 2)],
@@ -214,7 +237,7 @@ export const LOWER = {
     ],
   ] },
   o: { w: 1.02, strokes: [
-    [arc(0.51, 1.50, 0.49, 0.50, -90, -450)],
+    [arc(0.51, 1.50, 0.49, 0.50, -50, -410)],
   ] },
   p: { w: 0.92, strokes: [
     [
@@ -223,9 +246,17 @@ export const LOWER = {
       arc(0.10, 1.50, 0.80, 0.50, -90, 90),
     ],
   ] },
-  q: { w: 0.94, strokes: [
-    [arc(0.46, 1.50, 0.44, 0.50, -30, -390)],
-    [line(0.90, 1.02, 0.90, 3)],
+  q: { w: 1.34, strokes: [
+    // Two faults here, not one. The lift, and a missing foot: ZB gives `q` a
+    // hook that curls RIGHT — the mirror of `g`'s — and the code had a plain
+    // straight descender. The sweep must DECREASE (counter-clockwise on a
+    // y-down canvas) or the foot curls left and you have written a second `g`.
+    [
+      arc(0.46, 1.50, 0.44, 0.50, -30, -390),
+      retrace(line(0.841, 1.25, 0.90, 1.02)),
+      line(0.90, 1.02, 0.90, 2.56),
+      arc(1.12, 2.56, 0.22, 0.42, 180, 20),
+    ],
   ] },
   r: { w: 0.76, strokes: [
     [
@@ -242,7 +273,10 @@ export const LOWER = {
     ],
   ] },
   t: { w: 0.94, strokes: [
-    [line(0.38, 0.40, 0.38, 1.72), arc(0.64, 1.72, 0.26, 0.28, 180, 48)],
+    // Full ascender and no foot — ZB's `t` is a bare stem crossed at the
+    // midline, so it differs from `l` only by the crossbar. The 3/4 height and
+    // the curved foot were both mine, not the manuscript's.
+    [line(0.38, 0, 0.38, 2)],
     [line(0.04, 1.00, 0.80, 1.00)],
   ] },
   u: { w: 0.92, strokes: [

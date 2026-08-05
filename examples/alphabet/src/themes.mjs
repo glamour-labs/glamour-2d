@@ -9,20 +9,40 @@
  */
 
 /**
- * Card width is fixed (sized so the widest glyph, `W`, clears the pen at both
- * weights). Height is NOT: a letter with no descender would otherwise carry a
- * whole empty band of dead space under it, which makes the glyph read small and
- * the card bottom-heavy.
+ * Every card is the SAME size, for every letter.
  *
- * The trim only ever moves the card's bottom edge — `yTop`, and therefore the
- * baseline, stay put — so flipping between letters in one stage never shifts
- * the writing lines under the child's hand.
+ * An earlier version trimmed the bottom off letters with no descender, to avoid
+ * an empty band. That was wrong once the stage started scaling cards to fit: a
+ * taller `y` card was scaled down more than an `a` card, so the writing lines
+ * themselves changed size and position on screen as the child moved between
+ * letters. The rules are the one thing that must never move — they are what the
+ * child reads height against. Reserve the descender space always, and let the
+ * letters that do not use it simply not use it, exactly as a worksheet does.
  */
 export const CANVAS = { w: 420 };
 
-export function canvasHeight(theme, usesDescender) {
+/**
+ * Everything below the baseline, derived rather than guessed.
+ *
+ * Three constraints stack up and a single magic constant kept satisfying two of
+ * them: the deepest ink (`p` and `q` reach y=3, plus half a pen for the round
+ * cap), the caption sitting clear of that ink, and — in the card theme — the
+ * caption also sitting inside the panel, whose bottom edge is itself derived
+ * from the height. Solve it in one place instead.
+ */
+export function bottomLayout(theme) {
   const L = layout(theme);
-  return Math.round((usesDescender ? L.yDesc : L.yBase) + theme.bandDesc * 0.52) + 26;
+  const inkBottom = L.yBase + theme.bandDesc + L.pen / 2;
+  const captionTop = inkBottom + 14;
+  const captionH = theme.caption.size * 1.35;
+  // The card theme's caption lives inside the panel, which stops short of the
+  // canvas edge by its own inset plus its offset bottom edge.
+  const below = theme.panel ? theme.panel.inset + theme.panel.edgeOffset + 12 : 18;
+  return { inkBottom, captionTop, height: Math.round(captionTop + captionH + below) };
+}
+
+export function canvasHeight(theme) {
+  return bottomLayout(theme).height;
 }
 
 /** The tallest card any theme produces — a descender letter. Layout helpers
@@ -30,20 +50,25 @@ export function canvasHeight(theme, usesDescender) {
  *  so it must be derived, not typed in: hard-coding it went stale the moment a
  *  band height changed, and descender cards silently overflowed their cell. */
 export function maxCanvasHeight() {
-  return Math.max(...Object.values(THEMES).map((t) => canvasHeight(t, true)));
+  return Math.max(...Object.values(THEMES).map((t) => canvasHeight(t)));
 }
 
 export const THEMES = {
   /**
-   * A — "Classroom ruled paper". Zaner-Bloser manuscript on the traditional
-   * four-line rule: blue ceiling, dashed blue midline, red baseline, blue
-   * descender. Equal 1:1:1 bands. Quiet, print-like, restrained celebration.
+   * A — "Classroom ruled paper". Zaner-Bloser manuscript letterforms on a quiet
+   * three-line rule, styled the way a modern tracing app draws it: everything
+   * structural in near-invisible grey, and one saturated blue reserved entirely
+   * for "here is what to do next" — the start point, the path, the arrow.
+   *
+   * THREE rules, not four, and the same three for every letter. Descenders hang
+   * below the baseline with no extra line to catch them; adding a fourth rule
+   * only for `g j p q y` made those cards read as a different worksheet.
    */
   paper: {
     id: 'paper',
     label: 'Classroom paper',
-    blurb: 'Four-line school rule — blue ceiling, dashed midline, red baseline. Pencil-weight ghost letter.',
-    bg: '#FBFAF5',
+    blurb: 'Quiet three-line rule, pencil-weight ghost letter, and one blue for the path to follow.',
+    bg: '#FFFFFF',
 
     // Vertical rule placement (px). Equal bands.
     yTop: 108,
@@ -52,32 +77,31 @@ export const THEMES = {
     bandDesc: 140,
 
     rules: {
-      top: { color: '#7FA9D8', width: 2, dash: null, inset: 34 },
-      mid: { color: '#A8C4E2', width: 2, dash: [8, 6], inset: 34 },
-      base: { color: '#D24B4B', width: 3, dash: null, inset: 26 },
-      desc: { color: '#7FA9D8', width: 2, dash: null, inset: 34 },
+      top: { color: '#E8E8E8', width: 2, dash: null, inset: 26 },
+      mid: { color: '#E0E0E0', width: 2, dash: [11, 11], inset: 26 },
+      base: { color: '#E8E8E8', width: 2, dash: null, inset: 26 },
     },
 
-    penRatio: 0.14,      // track/ink stroke width, as a fraction of the x-height
-    inkRatio: 0.14,      // ink exactly covers the ghost — that coverage is the win
-    track: '#C9CDD4',
+    penRatio: 0.145,     // track/ink stroke width, as a fraction of the x-height
+    inkRatio: 0.145,     // ink exactly covers the ghost — that coverage is the win
+    track: '#E4E4E4',
     trackDashed: false,
-    guide: '#AAB0B8',
-    guideWidthRatio: 0.045,
-    guideDash: [9, 13],
-    ink: '#2B3A55',
+    guide: '#45A6E8',        // the blue is the instruction, and nothing else is blue
+    guideWidthRatio: 0.042,
+    guideDash: [8, 9],
+    ink: '#4A4A4A',          // graphite, not navy: it must read as pencil on paper
 
-    startDot: '#2E9E5B',
-    startDotRatio: 2.0,  // diameter, in pen widths
+    startDot: '#45A6E8',
+    startDotRatio: 0.7,  // diameter, in pen widths — a small bead, not a badge
     numeral: '#FFFFFF',
-    arrow: '#E07B39',
-    arrowRatio: 1.45,    // arrowhead length, in pen widths
+    arrow: '#45A6E8',
+    arrowRatio: 1.25,    // arrowhead length, in pen widths
 
-    handle: '#2E9E5B',   // the EASY-mode draggable puck
+    handle: '#45A6E8',   // the EASY-mode draggable puck
     handleRing: '#FFFFFF',
     handleArrow: '#FFFFFF',
 
-    spark: ['#F2B32E', '#2E9E5B'],
+    spark: ['#F2B32E', '#45A6E8'],
     sparkCount: 8,
 
     label: { color: '#3A3A3A', size: 40, x: 34, y: 28 },

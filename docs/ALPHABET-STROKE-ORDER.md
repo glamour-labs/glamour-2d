@@ -455,33 +455,51 @@ vendors already ship them as school-selectable options:
 
 ## What we implemented
 
-`examples/alphabet/src/glyphs.mjs` follows the Zaner-Bloser column above, with three
-deliberate departures. Each is a real decision, not an oversight.
+`examples/alphabet/src/glyphs.mjs` follows the Zaner-Bloser column above **exactly** — same
+pen-stroke count, same order, same direction, for all 52 glyphs. There are no departures.
 
-| Glyph(s) | ZB says | We ship | Why |
-|---|---|---|---|
-| `a` `d` `g` `q` | **1** stroke — bowl, then *retrace up* the stem and pull back down | **2** strokes — bowl, then the stem/tail as its own pen-stroke | ZB's single stroke needs a full up-and-back retrace of the stem. It adds drag length without adding a motor lesson, and it makes the bowl and the stem impossible to score separately. HWT and every tracing app we surveyed split them the same way. The rendered shape is identical. |
-| `J` | 2 strokes **with** a top bar | 2 strokes with a top bar | Followed — but note this is genuinely contested. US charts are unanimous for the bar; several UK schemes (Little Wandle) deliberately omit it, and most digital fonts have no bar. If a UK variant is ever needed, this is the first switch to add. |
-| `t` | full-ascender or 3/4 height, split by curriculum | 3/4 height (top at y = 0.40) | The shorter `t` is what distinguishes it from `l` at a glance, which matters more in a tracing game than curriculum fidelity. |
-| `t` | "top line → down → baseline" (a bare stem) | a small curved foot on the stem | Almost every modern worksheet and school font gives `t` a foot; a bare vertical reads as a cross, not a letter. The stroke order is unchanged — stem first, cross second. |
+An earlier version carried four, and an audit against the tables above found a fifth error
+nobody had declared. All five are now corrected:
+
+| Glyph(s) | Was | Now |
+|---|---|---|
+| `a` `d` `g` `q` | 2 strokes — bowl, then the stem as its own pen-stroke | **1** stroke, as ZB. The bridge from where the bowl closes to the top of the stem is marked `retrace`, so it is in the path the finger follows but not in the painted outline: the rendered letter is unchanged, the motion is ZB's. |
+| `d` | the stem started at the top line and only moved down | the **push up** to the top line is now part of the stroke, then the pull down — which is what ZB describes |
+| `q` | a plain straight descender, **no foot** | the foot hook ZB gives it, curling **right** (the mirror of `g`'s). This was an undeclared divergence, not a documented one. |
+| `t` | 3/4-height stem with a curved foot | a **bare full-ascender stem**, crossed at the midline. `t` now differs from `l` only by the crossbar — that is ZB. |
+
+Three further corrections came out of the same audit, all of them the code disagreeing with
+the tables rather than a judgement call: `K`'s upper arm now reaches the stem (it stopped
+0.2 units short), `R`'s leg starts at the stem instead of after a horizontal jog ZB does not
+describe, and `O`/`o` now start right-of-top where ZB and `C` start, rather than at 12
+o'clock — the sweep was always correct, but the start bead and first arrow were in the wrong
+place. Separately, lowercase `j`'s hook reached x = −0.22, outside the glyph's own box, so
+every `j` sat off-centre on its card; the glyph is shifted to sit inside its advance width.
 
 ### Optical adjustments (shape, not stroke order)
 
-Three glyphs stop just short of the line the tables name, because hitting it exactly reads worse
-at monoline weight. None changes the stroke count, order or direction:
+Three glyphs stop just short of the line the tables name, because hitting it exactly reads
+worse at monoline weight. None changes the stroke count, order or direction: `M`'s middle
+vertex at y = 1.88 and `N`'s diagonal at 1.86 (a vertex landing exactly on the baseline makes
+the halves look like they sag), and `W`'s middle apex at 0.34 (a full-height apex closes up
+the valleys at the fat pen weight). Lowercase `y`'s junction sits at 1.90 and `w`'s middle
+apex at 1.20 for the same reason.
 
-| Glyph | Table says | We ship | Why |
-|---|---|---|---|
-| `M` | the middle vertex reaches the baseline | y = 1.88 | A vertex landing exactly on the baseline makes the two halves look like they sag. |
-| `N` | the diagonal reaches the baseline | y = 1.86 | Same; also keeps the diagonal's round cap from spilling below the rule. |
-| `W` | the middle apex reaches the top line | y = 0.34 | At the fat pen weight a full-height apex closes up the two valleys. |
+### ⚠ A labelling error in §3.2 of this document
 
-Everything else — including the contested set (`f` 2 strokes cross-last, `k` 2 strokes,
-`t` stem-first, `y` right-arm-into-the-tail, `b`/`p` line-first vs `d`/`q` circle-first,
-`i`/`j` dot last, `x` backslash first, `Q` tail separate, `G` barred in one stroke with
-the bar right-to-left, `M`/`N`/`W` at 2/2/1 pen strokes) — matches the recommendation.
+§3.2 maps ZB's verbal "curve back / curve forward" onto counter-clockwise / clockwise one for
+one. **That mapping only holds for bowls.** On a y-down screen:
+
+- `J`'s hook and `g`/`j`'s tails are **clockwise**, not counter-clockwise as §3.2 and the
+  `J`/`g`/`j` rows say. (§3.2 correctly calls `S`'s lower curve clockwise — it is the same
+  motion, so the section contradicts itself.)
+- `u`/`U`'s base and `q`'s foot are **counter-clockwise**, not clockwise.
+
+The code follows the unambiguous prose ("curve left", "along the baseline, push up to
+top-right") and is correct. Left in place with this warning rather than silently rewritten,
+because anyone "fixing" the code to match those five labels would reverse five glyphs.
 
 **Not implemented:** the UK letterform variants (§7). A UK mode needs different *geometry*
-for `y` and `f`, not just a different stroke order, so it is a genuine feature rather than
-a config flag. The glyph data is a plain table, so adding a second table is the shape that
+for `y` and `f`, not just a different stroke order, so it is a genuine feature rather than a
+config flag. The glyph data is a plain table, so adding a second table is the shape that
 change would take.
