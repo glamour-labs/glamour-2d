@@ -87,7 +87,12 @@ export const THEMES = {
     track: '#E4E4E4',
     trackDashed: false,
     guide: '#45A6E8',        // the blue is the instruction, and nothing else is blue
-    guideWidthRatio: 0.042,
+    // A thinner dash is what lets two passes read as two lines where they run close
+    // together: the clear space between them is their separation minus this width, so
+    // every pixel taken off here buys a pixel of gap. At 0.042 the dash was 6px and the
+    // converging pair on `a`, `b` and `h` closed up into one line well before it
+    // actually met; at 0.028 it is 4px and the two stay legible most of the way in.
+    guideWidthRatio: 0.028,
     guideDash: [8, 9],
     ink: '#4A4A4A',          // graphite, not navy: it must read as pencil on paper
 
@@ -140,7 +145,7 @@ export const THEMES = {
     trackOutlineWidth: 4,
     trackDashed: false,
     guide: '#9FB3CB',
-    guideWidthRatio: 0.035,
+    guideWidthRatio: 0.024,
     guideDash: [5, 22],
     ink: '#1CB0F6',
 

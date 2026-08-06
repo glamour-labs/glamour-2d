@@ -63,12 +63,24 @@ export function placeGlyph(letter, upper, theme) {
     // passes interleave and the stem renders as a solid blue line while the
     // rest of the letter is dashed (`p`, `b`, `h`, `m`, `n`, `r`).
     const pieces = [];
+    const backs = [];
     let cur = [];
+    let back = [];
+    const flushBack = () => { if (back.length) { backs.push(back); back = []; } };
     for (const seg of segs) {
       if (seg.retrace) {
         if (cur.length) { pieces.push(cur); cur = []; }
+        // Consecutive retraces are ONE doubled-back run, not several — `d` slides up
+        // its bowl and on up the stem without stopping.
+        const pts = flattenStroke([seg], step);
+        if (back.length) {
+          const [lx, ly] = back[back.length - 1];
+          if (Math.hypot(pts[0][0] - lx, pts[0][1] - ly) < step * 0.5) pts.shift();
+          back.push(...pts);
+        } else back = pts;
         continue;
       }
+      flushBack();
       const pts = flattenStroke([seg], step);
       if (cur.length) {
         const [lx, ly] = cur[cur.length - 1];
@@ -79,12 +91,57 @@ export function placeGlyph(letter, upper, theme) {
       }
     }
     if (cur.length) pieces.push(cur);
+    flushBack();
     return {
       draw: px(flattenStroke(segs, step)),
       shape: px(flattenStroke(segs.filter((s) => !s.retrace), step)),
       pieces: pieces.map(px),
+      // The doubled-back runs, kept apart from `pieces` so the dashed guide can show
+      // them as their own lines while the solid ghost stays one continuous shape.
+      //
+      // Every doubled-back run gets its own dashed line, drawn exactly where the pen
+      // travels — including the stretches that lie right on top of the outbound line.
+      //
+      // That superposition is the POINT, not a defect. Two dash patterns over the same
+      // stretch fall out of phase and fill each other's gaps, so the doubled stretch
+      // reads bolder and denser than the single-pass dashes around it. That density IS
+      // the cue: it says the pen comes back along here. Where the run then leaves the
+      // stem — `b`'s bowl, `h`'s arch — the bold stretch resolves into a second line
+      // curving away, which is exactly the motion the child has to make.
+      //
+      // Three earlier attempts fought this instead of using it: a parallel offset, a
+      // bend, and an arrow marker. All three moved or decorated the guide to avoid an
+      // overlap that was doing the work on its own.
+      backs: backs.map(px),
     };
   });
+}
+
+/**
+ * Walk back along a flat polyline from its end by `d`, and report the heading there.
+ *
+ * Falls back to the whole path when it is shorter than `d` — the `i`/`j` dot is a
+ * deliberate 5.6px stroke, far shorter than an arrow, and must still get an angle
+ * rather than a division by zero.
+ */
+function backFromEnd(flat, d) {
+  const n = flat.length / 2;
+  const px_ = (i) => flat[i * 2];
+  const py_ = (i) => flat[i * 2 + 1];
+  let walked = 0;
+  for (let i = n - 1; i > 0; i--) {
+    const seg = Math.hypot(px_(i) - px_(i - 1), py_(i) - py_(i - 1));
+    if (walked + seg >= d) {
+      const t = (d - walked) / (seg || 1);
+      return {
+        x: r1(px_(i) + (px_(i - 1) - px_(i)) * t),
+        y: r1(py_(i) + (py_(i - 1) - py_(i)) * t),
+        angle: endTangent(flat),
+      };
+    }
+    walked += seg;
+  }
+  return { x: r1(px_(0)), y: r1(py_(0)), angle: endTangent(flat) };
 }
 
 /** A pointing triangle whose local geometry points DOWN at rotation 0 — the
@@ -187,16 +244,26 @@ export function buildDoc({ letter, upper, mode, theme: themeId }) {
   // Every outline goes down BEFORE any fill. Interleaving them per stroke draws
   // stroke 2's outline across stroke 1's fill, so the `A` crossbar would look
   // like it had been laid on top of the diagonals instead of merging with them.
+  // The ghost is drawn from the pen's FULL path, retraces included — so the grey
+  // letter is exactly the shape the child's ink makes when they finish. Building it
+  // from the retrace-split pieces (which the dashed guide below still must use) left
+  // the ghost missing the doubled-back stretch that the ink does draw, so the letter
+  // the child traced was not the letter they were shown.
+  //
+  // Solid ink can carry an overlap that a dash pattern cannot: one continuous
+  // polyline painted twice over the same stretch is indistinguishable from painted
+  // once, whereas interleaved dashes fill each other's gaps and read as a solid line.
+  // That asymmetry is the whole reason these two layers are built differently.
   if (theme.trackOutline) {
-    strokes.forEach((s, i) => s.pieces.forEach((piece, k) => nodes.push({
-      id: `trackEdge${i + 1}${k ? `_${k}` : ''}`, type: 'stroke', x: 0, y: 0, points: piece,
+    strokes.forEach((s, i) => nodes.push({
+      id: `trackEdge${i + 1}`, type: 'stroke', x: 0, y: 0, points: s.draw,
       stroke: theme.trackOutline, strokeWidth: L.pen + theme.trackOutlineWidth * 2, tension: 0,
-    })));
+    }));
   }
-  strokes.forEach((s, i) => s.pieces.forEach((piece, k) => nodes.push({
-    id: `track${i + 1}${k ? `_${k}` : ''}`, type: 'stroke', x: 0, y: 0, points: piece,
+  strokes.forEach((s, i) => nodes.push({
+    id: `track${i + 1}`, type: 'stroke', x: 0, y: 0, points: s.draw,
     stroke: theme.track, strokeWidth: L.pen, tension: 0,
-  })));
+  }));
 
   // ---- per-stroke guides ---------------------------------------------------
   // Only stroke 1's guides are lit at rest; the host reveals each next group as
@@ -211,6 +278,18 @@ export function buildDoc({ letter, upper, mode, theme: themeId }) {
       stroke: theme.guide, strokeWidth: guideW, dash: theme.guideDash, tension: 0, opacity: on,
     }));
 
+    // The doubled-back run gets its OWN dashed line. This is the one layer where the
+    // overlap is meant to show: the ghost and the finished ink are the same single
+    // shape, and it is the guide that tells the child the pen comes back down this
+    // way. Each stretch is still dashed exactly once — the pieces and the backs are
+    // disjoint — so nothing interleaves into a solid line. Where the two lines run
+    // close together near the baseline they read as converging, which is what the
+    // motion actually does.
+    s.backs.forEach((piece, k) => nodes.push({
+      id: `g${n}_back${k ? `_${k}` : ''}`, type: 'stroke', x: 0, y: 0, points: piece,
+      stroke: theme.guide, strokeWidth: guideW, dash: theme.guideDash, tension: 0, opacity: on,
+    }));
+
     // ONE arrowhead per stroke, at the end of the dashed path and continuous
     // with it — so the guide reads as a single line with a point on it.
     //
@@ -218,9 +297,18 @@ export function buildDoc({ letter, upper, mode, theme: themeId }) {
     // floated beside the letter. They looked like a detached arrowhead with no
     // line attached, and they said nothing the dashed path was not already
     // saying. Removed rather than restyled.
+    // A glyph may ask for the head to STOP SHORT of the path's end, via `arrowBack`.
+    // The head is positioned by its centre while its point reaches half a length
+    // further on, so by default the point sits just past the last vertex — which is
+    // right for a stroke that ends in open space, and wrong for one that ends where
+    // the pen doubled back onto its own line. Only `b` closes on its own stem, so only
+    // `b` sets it; every other letter keeps the placement it already had.
     const arrowSize = L.pen * theme.arrowRatio;
-    const tip = { x: s.draw[s.draw.length - 2], y: s.draw[s.draw.length - 1] };
-    nodes.push(arrowHead(`g${n}_end`, tip.x, tip.y, endTangent(s.draw) - 90, arrowSize, theme.arrow, on));
+    const back = arrowSize * (glyphFor(letter, upper).arrowBack ?? 0);
+    const at = back > 0
+      ? backFromEnd(s.draw, back)
+      : { x: s.draw[s.draw.length - 2], y: s.draw[s.draw.length - 1], angle: endTangent(s.draw) };
+    nodes.push(arrowHead(`g${n}_end`, at.x, at.y, at.angle - 90, arrowSize, theme.arrow, on));
 
     nodes.push({
       id: `ink${n}`, type: 'stroke', x: 0, y: 0, points: [],

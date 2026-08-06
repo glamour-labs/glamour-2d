@@ -217,17 +217,19 @@ describe('generated documents', () => {
     }
     expect(curved).toBeGreaterThan(60); // the sample is real, not an empty set
 
-    // One known residual, pinned rather than hidden: lowercase `b` in the card
-    // theme. Its single pen-stroke is stem-then-bowl, so the stem alone is 57%
-    // of the target and a stem-only swipe lands at 0.62 against a 0.60 gate.
-    // Tightening tolerance enough to fail it leaves a real child ~5px of slack
-    // inside a 51px channel, and wrongly failing a child who DID trace the
-    // letter is the worse error. Raise this only alongside evidence from real
-    // use; if the list grows beyond this one entry, something regressed.
-    // Pinned by identity, not by score: asserting the exact 0.62 would go red on
-    // any harmless tolerance or geometry tweak and teach the next person to
-    // update the number rather than ask why it moved.
-    expect(cheated).toEqual(['card/lower/B stroke 1']);
+    // No stroke in the corpus can be won by a straight swipe.
+    //
+    // This once pinned `card/lower/b` as a known residual at 0.62: its single pen-stroke
+    // is stem-then-bowl, so the straight chord from start to end runs down the stem and a
+    // stem-only swipe covered enough of the target to pass. It closes when `b`'s bowl
+    // returns onto the stem at mid-height, which makes the stem a smaller share of the
+    // target. The hole is geometry, not tolerance — which is why tightening tolerance had
+    // looked like the only fix and had rightly been refused.
+    //
+    // Pinned by identity, not by score, so a harmless tolerance tweak does not go red and
+    // teach the next person to edit the number instead of asking why it moved. If anything
+    // appears here, a letter has become cheatable and that is a teaching defect.
+    expect(cheated).toEqual([]);
   });
 
   it('has the committed .glam files in sync with the generator', () => {
