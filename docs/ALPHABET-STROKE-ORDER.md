@@ -111,10 +111,15 @@ continuous stroke — never the opening move of a letter.
 
 | Type | Glyphs | What happens |
 |---|---|---|
-| **Retrace up** (go back up a line you just drew, to launch a bowl/shoulder) | `a b d g h m n p q r` | ZB "push up" |
-| **Terminal upstroke** (the stroke *ends* travelling upward) | `u v w` · `N U V W` | ZB "slant up" / "push up straight" |
+| **Retrace up** (go back up a line you just drew, to launch a bowl/shoulder or a second stem) | `a b d g h m n p q r u` | ZB "push up" |
+| **Terminal upstroke** (the stroke *ends* travelling upward) | `v w` · `N U V W` | ZB "slant up" / "push up straight" |
 
 `m` retraces twice; `w`/`W` rise twice.
+
+`u` sits in the first row, not the second: it pushes up to the midline and then
+*pulls back down* to the baseline, exactly as §5 has always described it, so the
+stroke ends travelling downward. It was listed as a terminal upstroke, which its
+own entry contradicted.
 
 **B. Right-to-left strokes.** Only one in the whole alphabet:
 
