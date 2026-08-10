@@ -1,15 +1,20 @@
 import { parseArgs } from 'node:util';
+import { EXIT_MISSING_RENDER_DEP, GlamRenderEnvError } from '@glamour-labs/player/node';
 import { newCommand } from './commands/new.js';
 import { validateCommand } from './commands/validate.js';
 import { renderCommand } from './commands/render.js';
 import { previewCommand } from './commands/preview.js';
+import { doctorCommand, formatDoctorReport } from './commands/doctor.js';
 
 function usage(): void {
-  console.error('Usage: glam <new|validate|render|preview> [args]');
+  console.error('Usage: glam <new|validate|render|preview|doctor> [args]');
   console.error('  glam new [path]                         write a starter .glam');
   console.error('  glam validate <file>                    validate a .glam, exit 0/1');
   console.error('  glam render <file> -o <out.png> [--state name]');
   console.error('  glam preview <file>                     serve a live preview');
+  console.error('  glam doctor                             check whether render can run');
+  console.error('');
+  console.error('Exit codes: 0 ok · 1 failed · 3 a render prerequisite is missing (run `glam doctor`)');
 }
 
 async function main(argv: string[]): Promise<void> {
@@ -75,6 +80,13 @@ async function main(argv: string[]): Promise<void> {
       return;
     }
 
+    case 'doctor': {
+      const report = await doctorCommand();
+      console.log(formatDoctorReport(report));
+      if (!report.canRender) process.exitCode = EXIT_MISSING_RENDER_DEP;
+      return;
+    }
+
     default:
       usage();
       process.exitCode = 1;
@@ -83,5 +95,15 @@ async function main(argv: string[]): Promise<void> {
 
 main(process.argv.slice(2)).catch((err: unknown) => {
   console.error(err instanceof Error ? err.message : String(err));
+  // A missing browser/bundle is an environment problem, not a bad document, and
+  // gets its own exit code so a caller — usually the cast-glamour self-verify
+  // loop — can tell "install something" apart from "fix the .glam" without
+  // parsing prose.
+  if (err instanceof GlamRenderEnvError) {
+    console.error('');
+    console.error('Run `glam doctor` for the full prerequisite check.');
+    process.exitCode = err.exitCode;
+    return;
+  }
   process.exitCode = 1;
 });

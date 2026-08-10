@@ -20,11 +20,14 @@
  * optionally `applyStateSet(state.set, 0, 'linear')`, then capture.
  */
 
-import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { validate, type GlamDoc } from '@glam/core';
+import { validate, type GlamDoc } from '@glamour-labs/core';
+import {
+  GlamRenderEnvError,
+  findUmdBundle,
+  playwrightInstallHint,
+  umdBundleCandidates,
+} from './diagnose.js';
 
 export interface RenderOpts {
   /** Apply a named machine state's `set` before capturing. */
@@ -49,27 +52,15 @@ interface PageLike {
   close(): Promise<void>;
 }
 
-/**
- * Resolve the built UMD player bundle the page will load.
- *
- * Resolved relative to this module rather than via `require.resolve` on the
- * package name: the package's `exports` map deliberately does not expose
- * `./package.json`, so a name-based lookup throws ERR_PACKAGE_PATH_NOT_EXPORTED.
- * Two candidates because this file runs both bundled (`dist/node.js`, bundle is
- * a sibling) and straight from source under vitest (`src/`, bundle is `../dist`).
- */
+/** The built UMD bundle the page will load, or a targeted error naming the fix. */
 function umdBundlePath(): string {
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const candidates = [
-    path.join(here, 'glam-player.umd.js'),
-    path.join(here, '..', 'dist', 'glam-player.umd.js'),
-  ];
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) return candidate;
-  }
-  throw new Error(
-    `renderToPNG: UMD bundle not found. Looked in:\n  ${candidates.join('\n  ')}\n`
-    + 'Run `pnpm build` in the player package first.',
+  const found = findUmdBundle();
+  if (found) return found;
+  throw new GlamRenderEnvError(
+    'bundle-missing',
+    `renderToPNG: the player's UMD bundle has not been built. Looked in:\n  `
+    + umdBundleCandidates().join('\n  '),
+    'pnpm --filter @glamour-labs/player build',
   );
 }
 
@@ -78,11 +69,35 @@ async function loadChromium(): Promise<ChromiumLike> {
     const mod = (await import('playwright')) as unknown as { chromium: ChromiumLike };
     return mod.chromium;
   } catch {
-    throw new Error(
-      'renderToPNG: playwright is required for headless render in v2. '
-      + 'Install it with `pnpm add -D playwright` then `npx playwright install chromium`.',
+    throw new GlamRenderEnvError(
+      'playwright-missing',
+      'renderToPNG: the `playwright` package is not installed. Headless render '
+      + 'needs a real browser because the renderer is WebGL2, which has no '
+      + 'in-process Node rasterizer.',
+      playwrightInstallHint(),
     );
   }
+}
+
+/**
+ * Chromium's own "browser not downloaded" failure, re-thrown as ours.
+ *
+ * This is a genuinely different fault from a missing package and takes a
+ * different fix, but it surfaces far downstream — the import succeeds and only
+ * `launch()` throws — so without this it reached the user as a raw playwright
+ * stack trace with no glam-specific guidance at all.
+ */
+function asRenderEnvError(err: unknown): never {
+  const message = err instanceof Error ? err.message : String(err);
+  if (/Executable doesn't exist|please run the following command|browserType\.launch/i.test(message)) {
+    throw new GlamRenderEnvError(
+      'chromium-missing',
+      'renderToPNG: playwright is installed, but its Chromium browser has not '
+      + `been downloaded.\n\nPlaywright reported:\n  ${message.split('\n')[0]}`,
+      'npx playwright install chromium',
+    );
+  }
+  throw err;
 }
 
 // Runs inside the page as a self-invoking expression.
@@ -131,10 +146,12 @@ export async function renderToPNG(doc: GlamDoc, opts: RenderOpts = {}): Promise<
   const chromium = await loadChromium();
   const bundle = await readFile(umdBundlePath(), 'utf8');
 
-  const browser = await chromium.launch({
-    // SwiftShader keeps WebGL2 available on machines with no usable GPU (CI).
-    args: ['--enable-unsafe-swiftshader', '--hide-scrollbars'],
-  });
+  const browser = await chromium
+    .launch({
+      // SwiftShader keeps WebGL2 available on machines with no usable GPU (CI).
+      args: ['--enable-unsafe-swiftshader', '--hide-scrollbars'],
+    })
+    .catch(asRenderEnvError);
   try {
     const page = await browser.newPage({
       viewport: { width: doc.canvas.w, height: doc.canvas.h },
