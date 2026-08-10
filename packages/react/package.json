@@ -1,6 +1,6 @@
 {
   "name": "@glamour-labs/react",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "React binding for glamour documents — a <Glamour doc={…} /> component with an imperative handle for send/setInput/play/pause.",
   "keywords": ["glamour", "glam", "react", "animation", "interactive", "webgl", "canvas"],
   "license": "MIT",
@@ -40,8 +40,8 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "@glamour-labs/core": "^0.1.1",
-    "@glamour-labs/player": "^0.1.1"
+    "@glamour-labs/core": "^0.1.2",
+    "@glamour-labs/player": "^0.1.2"
   },
   "peerDependencies": {
     "react": ">=18",

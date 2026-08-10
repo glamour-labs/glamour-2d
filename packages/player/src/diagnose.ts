@@ -82,22 +82,42 @@ export type InstallKind = 'source-checkout' | 'global-install' | 'project-depend
  * useless — it always said `pnpm add -D playwright`, a no-op for the global
  * install most authors have.
  *
- * Decided by whether the module sits inside a `node_modules` directory, not by
- * comparing against `process.cwd()`. An earlier version did the latter and
- * mislabelled a source checkout as "project-local" whenever it was invoked from
- * a parent directory — running the wrapper from `$HOME` made everything under
- * `$HOME` look project-local. cwd describes where you are standing, not how the
- * code got there.
+ * The question is "which tree was this installed into?", and it is answered by
+ * comparing the INSTALL ROOT — the directory holding the outermost `node_modules`
+ * on this module's path — against the working directory:
  *
- * Still a heuristic for the global-vs-project split (a project dependency and a
- * global install both live in `node_modules`), which is why callers print both
- * commands rather than trusting this alone.
+ *   - no `node_modules` on the path at all  -> a source checkout
+ *   - install root is cwd or an ancestor    -> a project dependency
+ *   - anywhere else                          -> a global install
+ *
+ * Note the direction. Two earlier versions asked "does the module path start
+ * with cwd?", which is backwards: a project's `node_modules` sits at cwd or
+ * ABOVE it, never below. That bug survived one fix because it is invisible
+ * unless you run from a parent directory — and it then mislabelled a real
+ * global install as a project dependency, because nvm puts the global root
+ * under `$HOME` and `$HOME` was the cwd. Both times the wrong install command
+ * was printed first.
  */
 export function installKind(): InstallKind {
-  const self = path.resolve(fileURLToPath(import.meta.url));
-  if (!self.includes(`${path.sep}node_modules${path.sep}`)) return 'source-checkout';
-  const cwd = path.resolve(process.cwd());
-  return self.startsWith(cwd + path.sep) ? 'project-dependency' : 'global-install';
+  return classifyInstall(path.resolve(fileURLToPath(import.meta.url)), path.resolve(process.cwd()));
+}
+
+/**
+ * The pure half of `installKind`, split out so the cases that actually broke can
+ * be tested with real paths. `import.meta.url` cannot be injected, so without
+ * this the global-install branch is only reachable by publishing and installing
+ * — which is exactly how the bug shipped twice.
+ */
+export function classifyInstall(selfPath: string, cwd: string): InstallKind {
+  const marker = `${path.sep}node_modules${path.sep}`;
+
+  const firstNodeModules = selfPath.indexOf(marker);
+  if (firstNodeModules === -1) return 'source-checkout';
+
+  const installRoot = selfPath.slice(0, firstNodeModules);
+  const rootCoversCwd = cwd === installRoot || cwd.startsWith(installRoot + path.sep);
+
+  return rootCoversCwd ? 'project-dependency' : 'global-install';
 }
 
 /**

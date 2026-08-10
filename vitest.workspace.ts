@@ -31,7 +31,7 @@ export default defineWorkspace([
         // Pure logic — no canvas needed.
         'packages/core/test/{expr,motion,onkey,ops,palette,schema,starterDoc,trace,validate}.test.ts',
         // Node-only helpers + the headless render path (drives its own browser).
-        'packages/player/test/{export,machine,render-node}.test.ts',
+        'packages/player/test/{diagnose,export,machine,render-node}.test.ts',
         'packages/cli/test/**/*.test.ts',
         'packages/mcp/test/**/*.test.ts',
         'skills/*/test/**/*.test.ts',
