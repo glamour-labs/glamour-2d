@@ -10,6 +10,46 @@ composes interactive animations instead of guessing at them.
 
 > A *glamour* is a medieval spell that casts a living illusion on the eye.
 
+## Install
+
+There are two audiences here, and they need different things. Deciding which one you are is the
+whole of the setup:
+
+**Playing a `.glam` in an app** — you need the runtime, and nothing else. No CLI, no browser
+download, no AI tooling.
+
+```bash
+pnpm add @glamour-labs/react      # React hosts — pulls @glamour-labs/player + @glamour-labs/core
+pnpm add @glamour-labs/player     # any other browser host (vanilla, web component, Vue, Svelte)
+```
+
+`@glamour-labs/react` ships with `'use client'`, so it drops straight into a Next.js App Router project.
+See **[Using Glamour](docs/USING-GLAMOUR.md)** for the embed paths, including a self-contained
+`<script>` build with no bundler at all.
+
+**Authoring a `.glam`** — you need the CLI, which is a separate, global install:
+
+```bash
+npm install -g @glamour-labs/cli
+glam doctor                  # says whether this install can render, and what's missing if not
+```
+
+`new`, `validate` and `preview` work immediately. `render` — the visual half of the self-verify
+loop — additionally needs a real browser, because the renderer is WebGL2 and Node has no
+in-process rasterizer for it:
+
+```bash
+npm install -g playwright && npx playwright install chromium
+```
+
+That's deliberately opt-in: a React app embedding a glamour should never pay for a 300MB Chromium
+download it will never use. Run `glam doctor` any time `render` fails — it names the failing
+prerequisite and the exact command that repairs it, and exits `3` (environment) rather than `1`
+(bad document) so scripts and agents can tell the two apart.
+
+For AI authoring — describing a glamour in prose and having Claude write it — see
+**[the cast-glamour skill](skills/cast-glamour/)**.
+
 ## Documentation
 
 - **[Alphabet tracing](examples/alphabet/README.md)** — the largest worked example: 208 generated
@@ -30,11 +70,11 @@ One document (`.glam`), several ways to author and play it:
 
 | Surface | What it is |
 |---|---|
-| **`@glam/core`** | Headless engine — the format, `validate`, `applyOps`, headless `renderToPNG`, the env-agnostic scene+machine builder. The only unit with real logic. |
-| **`@glam/player`** | Browser runtime — `renderGlamour(doc, mount)`, `<glam-canvas>` web-component, self-contained HTML export, and `createHarness(doc)` for headless drive-and-assert testing. What ships with a shared glamour. |
-| **`@glam/react`** | React wrapper — a `<Glamour doc={…} onEmit onStroke onPointer />` component + an imperative handle (`send`/`setInput`/`play`/`pause`). The idiomatic embed for a React host. |
+| **`@glamour-labs/core`** | Headless engine — the format, `validate`, `applyOps`, headless `renderToPNG`, the env-agnostic scene+machine builder. The only unit with real logic. |
+| **`@glamour-labs/player`** | Browser runtime — `renderGlamour(doc, mount)`, `<glam-canvas>` web-component, self-contained HTML export, and `createHarness(doc)` for headless drive-and-assert testing. What ships with a shared glamour. |
+| **`@glamour-labs/react`** | React wrapper — a `<Glamour doc={…} onEmit onStroke onPointer />` component + an imperative handle (`send`/`setInput`/`play`/`pause`). The idiomatic embed for a React host. |
 | **`glam` CLI** | `glam new / validate / render / preview`. The self-verify loop lives here. |
-| **`@glam/mcp`** | MCP server — the core operations as tools, so any MCP client can author `.glam` files. |
+| **`@glamour-labs/mcp`** | MCP server — the core operations as tools, so any MCP client can author `.glam` files. |
 | **`cast-glamour` skill** | The authoring knowledge for Claude Code: schema + palette + the self-verify loop. |
 | **Studio** (`apps/studio`) | Visual playground — JSON editor + live preview + input controls + palette. |
 
@@ -68,20 +108,22 @@ One document (`.glam`), several ways to author and play it:
   code both feed those inputs. Built on a hand-written WebGL2 renderer (drawing + hit-testing)
   and XState (statechart). See [docs/V2-RENDERER.md](docs/V2-RENDERER.md).
 
-## Quickstart
+## Working on this repo
+
+> This section is for developing Glamour itself. To *use* it, see [Install](#install) above.
 
 > **No Node version pin.** v2 dropped the native `canvas` package along with Konva, so the
 > Node-20 ABI constraint is gone. Headless render drives a real headless Chromium instead —
 > install it once with `npx playwright install chromium`.
 
-This repo uses **pnpm** (npm also works — the `*` workspace specs link locally under both).
+This repo uses **pnpm** (npm also works — the workspace specs link locally under both).
 
 ```bash
 pnpm install
 npx playwright install chromium   # once — headless render + the browser test project
 pnpm build
 pnpm test               # all tests across every surface (node + real-Chromium projects)
-pnpm --filter @glam/studio dev   # the visual Studio
+pnpm --filter @glamour-labs/studio dev   # the visual Studio
 pnpm playground                  # static server for the example pages
 ```
 
@@ -90,16 +132,17 @@ Then open <http://localhost:4321/examples/alphabet/> for the alphabet tracing ga
 
 ## The `glam` CLI
 
-The whole authoring + self-verify loop is four commands. `glam` is a global wrapper
-(`~/.local/bin/glam`) that runs the built CLI; from a fresh checkout you can also call
+The whole authoring + self-verify loop is five commands. Install it with
+`npm install -g @glamour-labs/cli`; from a source checkout you can also call
 `node packages/cli/dist/cli.js <cmd>`.
 
-| Command | What it does |
-|---|---|
-| `glam new <file.glam>` | write a starter `.glam` to edit from |
-| `glam validate <file.glam>` | check the doc against the schema + every semantic rule; prints `ok` / names the offending node/state/bind |
-| `glam render <file.glam> -o <out.png>` | headless-render the **resting frame** to a PNG via headless Chromium, ~1–2s (look at it — the self-verify loop) |
-| `glam preview <file.glam>` | serve a live, interactive page (real pointer/drag behavior) at a printed URL |
+| Command | What it does | Needs a browser? |
+|---|---|---|
+| `glam new <file.glam>` | write a starter `.glam` to edit from | no |
+| `glam validate <file.glam>` | check the doc against the schema + every semantic rule; prints `ok` / names the offending node/state/bind | no |
+| `glam render <file.glam> -o <out.png>` | headless-render the **resting frame** to a PNG via headless Chromium, ~1–2s (look at it — the self-verify loop) | **yes** |
+| `glam preview <file.glam>` | serve a live, interactive page (real pointer/drag behavior) at a printed URL | no |
+| `glam doctor` | report each render prerequisite and the exact command that fixes it | — |
 
 ```bash
 glam new my.glam
@@ -108,6 +151,15 @@ glam render my.glam -o my.png     # then open my.png and check it
 glam preview my.glam
 ```
 
+**Exit codes** are load-bearing, because the most common failure is an environment problem being
+mistaken for a document problem:
+
+| Exit | Meaning | Reaction |
+|---|---|---|
+| `0` | passed | continue |
+| `1` | the document is wrong | fix the `.glam`; stderr names the node/state/bind |
+| `3` | the environment can't render | `glam doctor`, then install what it names — **don't touch the document** |
+
 ## Testing behavior (drive-and-assert)
 
 Because the runtime is drivable and inspectable, you can exercise an interactive glamour
@@ -115,7 +167,7 @@ Because the runtime is drivable and inspectable, you can exercise an interactive
 This is what a binary format (Rive) can't give an AI: *drive it → freeze it → check it*.
 
 ```ts
-import { createHarness } from '@glam/player';
+import { createHarness } from '@glamour-labs/player';
 const h = createHarness(doc);
 const e = h.stroke([[10,10],[55,55],[100,100]]); // full drag → e.match.score
 h.dragTo([[10,10],[55,55]]);                       // "half go": stop mid-drag…
@@ -179,3 +231,25 @@ the generator.
 Docs: [Roadmap / what's next](docs/ROADMAP.md) · [Using Glamour](docs/USING-GLAMOUR.md) · [Decisions](docs/DECISIONS.md) ·
 plans under `docs/superpowers/plans/` · proof sketches in `sketches/` (progress-ring, toggle, crab-game,
 orb, **trace-letter**).
+
+## Packages
+
+All published from this repo under the `@glamour` scope:
+
+| Package | What it's for |
+|---|---|
+| [`@glamour-labs/core`](packages/core) | the format, `validate`, `applyOps`, the scene + machine builder |
+| [`@glamour-labs/player`](packages/player) | browser runtime, web component, inline-HTML export, test harness |
+| [`@glamour-labs/react`](packages/react) | the `<Glamour>` component (client-only, `'use client'`) |
+| [`@glamour-labs/cli`](packages/cli) | the `glam` binary — `new` / `validate` / `render` / `preview` / `doctor` |
+| [`@glamour-labs/mcp`](packages/mcp) | MCP server, so any MCP client can author `.glam` files |
+
+## Contributing
+
+Issues and pull requests are welcome. Fork the repo, branch, and open a PR — every change needs
+`pnpm build && pnpm test` green, and anything touching the renderer needs the parity gate against
+the v1 pixel oracle (see [docs/V2-RENDERER.md](docs/V2-RENDERER.md)).
+
+## License
+
+MIT — see [LICENSE](LICENSE).

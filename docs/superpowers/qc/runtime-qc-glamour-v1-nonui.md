@@ -52,7 +52,7 @@ Environment: Node v20.19.4 (`export PATH="$HOME/.nvm/versions/node/v20.19.4/bin:
 
 ## 3. MCP server (`@glam/mcp`) — PASS
 
-- Tested: real subprocess over stdio (not in-process/in-memory) — `StdioClientTransport` spawning `node /Users/khavu/Project/glamour/packages/mcp/dist/index.js` (the `glam-mcp` bin target), full MCP SDK `Client.connect()` (does the `initialize` handshake), `listTools()`, then a scripted `callTool` session: `new_scene` → `add_node` → `apply_primitive` → `validate` → `render_preview`, plus an error-path check (`add_binding` to a missing node → `validate`).
+- Tested: real subprocess over stdio (not in-process/in-memory) — `StdioClientTransport` spawning `node <repo>/packages/mcp/dist/index.js` (the `glam-mcp` bin target), full MCP SDK `Client.connect()` (does the `initialize` handshake), `listTools()`, then a scripted `callTool` session: `new_scene` → `add_node` → `apply_primitive` → `validate` → `render_preview`, plus an error-path check (`add_binding` to a missing node → `validate`).
 - Expected: ≥11 tools listed; scripted session succeeds; `render_preview` returns a real PNG (base64, decodes to PNG signature); error path surfaces `isError`.
 - Actual:
   ```

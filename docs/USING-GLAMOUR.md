@@ -10,19 +10,51 @@ vector shapes and text that respond to clicks, host inputs, and a state machine.
 
 ---
 
-## 0. Setup (today)
+## 0. Setup
 
-> **Heads up — not on npm yet.** This is a local monorepo. You install it by cloning + building,
-> not `pnpm add @glam/…`. Publishing to a registry is still the first packaging step.
+Two audiences, two setups. Pick the one that matches what you're doing.
 
-Uses **pnpm** (npm also works — inter-package `*` specs link locally under both, via `link-workspace-packages`).
+### Playing a glamour in an app (the common case)
+
+Install from npm. Nothing else — no CLI, no Chromium.
 
 ```bash
-git clone <repo>  # or: cd ~/Project/glamour
+pnpm add @glamour-labs/react     # React / Next.js hosts
+pnpm add @glamour-labs/player    # everything else (vanilla, web component, Vue, Svelte)
+```
+
+`@glamour-labs/core` comes along transitively; you rarely import it directly.
+
+### Authoring a glamour
+
+The CLI is a separate global install, because authoring tooling has no business inside a product's
+dependency tree:
+
+```bash
+npm install -g @glamour-labs/cli
+glam doctor
+```
+
+`new`, `validate` and `preview` work at once. `render` also needs a browser — the renderer is
+WebGL2 and Node cannot rasterize it in-process:
+
+```bash
+npm install -g playwright && npx playwright install chromium
+```
+
+If `render` ever fails, run `glam doctor` before touching your document: it names which
+prerequisite is missing and the command that fixes it. `glam` exits `3` for an environment problem
+and `1` for a bad document — an exit 3 is never evidence that your `.glam` is wrong.
+
+### Working on Glamour itself
+
+```bash
+git clone https://github.com/glamour-labs/glamour-2d.git
+cd glamour-2d
 pnpm install      # no native builds — v2 has no `canvas` dependency
 npx playwright install chromium   # once: headless render + the browser test project need it
 pnpm build        # builds core, player (incl. the UMD bundle), cli, mcp, studio
-pnpm test         # 265 tests, should be green
+pnpm test         # should be green
 ```
 > First time on pnpm: it only runs a dependency's native build script if that package is listed under
 > `onlyBuiltDependencies` in `pnpm-workspace.yaml` (just `esbuild` now — the native `canvas` package
@@ -115,8 +147,50 @@ v1.1 nicety.)*
   });
 </script>
 ```
-(With bundlers/ESM once published: `import { renderGlamour } from '@glam/player'`. Node-only helpers
-like `exportInlineHTML` live at `@glam/player/node`.)
+(With bundlers/ESM: `import { renderGlamour } from '@glamour-labs/player'`. Node-only helpers
+like `exportInlineHTML` live at `@glamour-labs/player/node`.)
+
+### Path D — React, including Next.js App Router
+
+```bash
+pnpm add @glamour-labs/react
+```
+
+```tsx
+import { Glamour, type GlamourHandle } from '@glamour-labs/react';
+import doc from './my.glam';           // or fetch it at runtime
+
+export function Badge() {
+  const ref = useRef<GlamourHandle>(null);
+  return (
+    <Glamour
+      ref={ref}
+      doc={doc}
+      onEmit={(e) => console.log('clicked', e.node)}
+      onStroke={(e) => console.log('score', e.match?.score)}
+    />
+  );
+}
+```
+
+The handle exposes `send` / `setInput` / `play` / `pause`, so the host keeps the logic — scoring,
+timers, correctness — and Glamour owns motion and input.
+
+**Next.js App Router:** `@glamour-labs/react` ships a `'use client'` directive, so importing it from a
+server component works without you adding one. It has to: the component owns a live WebGL2 context,
+refs and effects, none of which can exist during a server render.
+
+Two things worth knowing before you hit them:
+
+- **`.glam` import.** Importing JSON directly works in Next out of the box. If you'd rather ship the
+  document as an asset, `fetch()` it in an effect and render nothing until it resolves.
+- **No SSR fallback is rendered.** The canvas only appears after hydration. If the glamour occupies
+  layout space, give its wrapper explicit dimensions matching `canvas.w`/`canvas.h` so the page
+  doesn't shift when it mounts.
+
+The runtime pulls **no Node dependencies and no Chromium** — playwright is an optional peer used
+only by headless render, which a browser host never calls. Your bundle gets `@glamour-labs/player` +
+`@glamour-labs/core` + `xstate` and nothing else.
 
 ---
 

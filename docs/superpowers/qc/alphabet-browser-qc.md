@@ -51,8 +51,8 @@ cited numbers.
   `i` and `j` — the only two letters using `dot()` in `examples/alphabet/src/glyphs.mjs`
   (confirmed via `grep -n "dot(" glyphs.mjs` → lines 184, 188 only).
 - Evidence:
-  - `/Users/khavu/Project/glamour/.claude/worktrees/alphabet-tracing-game-293174/docs/superpowers/qc/screens/i-hard-dot-oops-toast.png` — right rail shows `✓ Good stroke / Score 100%` while the bottom toast simultaneously reads "Oops — let's start that one again."
-  - `/Users/khavu/Project/glamour/.claude/worktrees/alphabet-tracing-game-293174/docs/superpowers/qc/screens/i-hard-dot-after-reload.png` — 900ms later: back to a pristine "Stroke 1 of 2," the previously-perfect stem is gone.
+  - `<repo>/docs/superpowers/qc/screens/i-hard-dot-oops-toast.png` — right rail shows `✓ Good stroke / Score 100%` while the bottom toast simultaneously reads "Oops — let's start that one again."
+  - `<repo>/docs/superpowers/qc/screens/i-hard-dot-after-reload.png` — 900ms later: back to a pristine "Stroke 1 of 2," the previously-perfect stem is gone.
   - Repro scripts (state dumps inline): stroke1 `current:1, verdict:"✓ Good stroke"` → dot tap `current:1 (unchanged), toast:"Oops — let's start that one again", meter:"Score100%Covered100%Off path0%Right startyes"` → +1s `current:0`. Identical sequence reproduced for `j` (`afterStroke1.current:1` → dot tap `meter:"Score100%…"` + Oops toast → `afterReload.current:0`).
   - Mechanism: `packages/core/src/trace.ts` (`traceMatch`) is correct and blameless — the bug is the app-level heuristic in `examples/alphabet/index.html`'s `onStroke` handler (search `let inked = 0`), which fires *before* consulting `e.match`.
 
@@ -87,9 +87,9 @@ cited numbers.
   right edge, the "2 strokes · Free write" caption, and the "Follow the arrows" instruction
   text are all clipped by the viewport edge on a **fresh load**.
 - Evidence:
-  - `/Users/khavu/Project/glamour/.claude/worktrees/alphabet-tracing-game-293174/docs/superpowers/qc/screens/responsive-375-fresh-reload.png` — instruction text and card right edge cut off at the viewport boundary on a cold load at 375×812.
-  - `/Users/khavu/Project/glamour/.claude/worktrees/alphabet-tracing-game-293174/docs/superpowers/qc/screens/responsive-375.png` — same defect via a live resize (kept as a secondary data point; the fresh-reload screenshot above is the one that rules out a resize-event artifact).
-  - `/Users/khavu/Project/glamour/.claude/worktrees/alphabet-tracing-game-293174/docs/superpowers/qc/screens/responsive-768.png` — visible dead whitespace to the right of every panel at 768px; the literal overflow (`scrollWidth 1317`) sits past the visible fold, not shown in-frame by definition, so the DOM measurement is the load-bearing evidence for this width, not the screenshot.
+  - `<repo>/docs/superpowers/qc/screens/responsive-375-fresh-reload.png` — instruction text and card right edge cut off at the viewport boundary on a cold load at 375×812.
+  - `<repo>/docs/superpowers/qc/screens/responsive-375.png` — same defect via a live resize (kept as a secondary data point; the fresh-reload screenshot above is the one that rules out a resize-event artifact).
+  - `<repo>/docs/superpowers/qc/screens/responsive-768.png` — visible dead whitespace to the right of every panel at 768px; the literal overflow (`scrollWidth 1317`) sits past the visible fold, not shown in-frame by definition, so the DOM measurement is the load-bearing evidence for this width, not the screenshot.
   - Computed values: `{docScrollWidth:1309, innerWidth:375}` and `{docScrollWidth:1317, innerWidth:768}` (both `hasHorizontalScrollbar:true`), vs `{docScrollWidth:1280, innerWidth:1280}` at desktop (no overflow) — measured via `document.documentElement.scrollWidth`.
   - The "card comes first on mobile" ordering requirement itself is satisfied (`.stage-card{order:1}` correctly puts the card above the rail — confirmed visually in all three responsive screenshots); it's specifically the *width* of the stacked panels that's broken, not their order.
 

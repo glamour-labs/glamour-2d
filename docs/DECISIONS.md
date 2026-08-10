@@ -8,6 +8,10 @@ toolchain or packaging — the *why* is here so choices don't get silently rever
 > points** — in particular there is no longer a Node 20 / native-`canvas` requirement, `renderToPNG`
 > has moved out of `@glam/core`, and the test count is 265 rather than 131. Read §5 before acting on
 > anything toolchain-related in §1 or §3.
+>
+> **§6 supersedes §2 entirely** — the packages ARE published now, and the scope is `@glamour-labs/*`,
+> not `@glam/*`. Package names written as `@glam/…` anywhere in §1–§5 are historical; the live
+> names all read `@glamour-labs/…`. Read §6 before touching anything about packaging or release.
 
 ---
 
@@ -176,3 +180,104 @@ and `~/.claude/agents/glamour-smith.md` all point at v2; v1's README carries a
 RETIRED banner. v1 stays on disk and stays built — it is the pixel oracle for both
 parity gates, and a stale `dist/` there has already produced one wrong result. See
 ROADMAP §"CUTOVER DONE" for the verification and the re-copy caveat on the skill.
+
+---
+
+## 6. Published to npm as `@glamour-labs/*`, from `glamour-labs/glamour-2d`
+
+**Date:** 2026-08-10 · **Status:** active · **Supersedes §2 entirely**
+
+**Decision.** The five library packages are published to the public npm registry under the
+`@glamour-labs` scope, from a public GitHub repo at `glamour-labs/glamour-2d`, MIT licensed.
+
+**Why now.** §2 said to publish "only when there's a second consumer." There is one:
+`react-web-monorepo` (Next 16 / React 19) embeds glamours in a real product. Copying a UMD file
+into `public/` — §2's stopgap — has no version, no changelog, and no way to tell which build a
+given app is running.
+
+**Names — and the check that cannot be skipped.** Plain `glamour` was unavailable in both
+namespaces, and finding that out cost two rounds of rework:
+
+- **GitHub:** `github.com/glamour` is an existing *user* account. GitHub shares one namespace
+  between users and organizations, so no org by that name can exist.
+- **npm:** `@glamour` is held too — with **zero published packages under it**. This is the trap.
+  We reasoned from `registry.npmjs.org/@glamour%2Fcore` returning 404 that the scope was free. It
+  isn't: a 404 means *that package* doesn't exist, and says nothing about who owns the scope. npm
+  answers anonymous namespace lookups with 401/403, so **scope availability is unknowable without
+  logging in.** Only the create-org form gives a real answer.
+
+The rule that falls out: **verify a name in the registry's own UI before renaming anything to it.**
+The available-name check is not a `curl`.
+
+So the scope is `@glamour-labs`, matching the org. `glamour-labs` is deliberately family-level
+rather than dimensional — it is an umbrella for `glamour-2d`, `glamour-video` and later
+`glamour-3d`, and one scope shared across all three is worth more than a per-repo `@glamour-2d`.
+Scope and org don't have to match; here they happen to, which is strictly easier to explain.
+
+What did NOT get renamed, on purpose: the `glam` CLI binary, the `.glam` extension, the
+`window.Glam` UMD global, and `glam-player.umd.js`. Those are format and UX surface. Only package
+identity changed.
+
+**The five flips (what §2 predicted, plus one it missed):**
+1. `private: true` removed from the five packages. `apps/studio` and the examples stay private.
+2. **`files: ["dist"]` added — this was the trap.** `dist/` is gitignored, and with no `files`
+   field npm falls back to `.gitignore` when building the tarball. Publishing as-is would have
+   *succeeded* and shipped source with no build output. A silent broken publish, not a loud one.
+3. Inter-package specs went `"*"` → `"^0.1.0"`. `"*"` would have published as a dependency on
+   *whatever core is latest, forever*. `^0.1.0` publishes correctly **and** still links locally
+   under pnpm's `link-workspace-packages`, so §1's npm fallback survives — which `workspace:*`
+   would have broken, since npm doesn't implement that protocol.
+4. `LICENSE` (MIT) added at the root plus `license`/`repository`/`homepage`/`bugs` on each package.
+   A public repo with no license is legally all-rights-reserved and nobody can use it.
+5. `publishConfig.access: public` (scoped packages default to restricted) and a `prepublishOnly`
+   build per package.
+
+**The `canvas` native-dep worry from §2 is moot.** v2 deleted native `canvas` with Konva. The only
+heavy dependency left is playwright, and it is an *optional peer* — see §7.
+
+**Release:** `pnpm release` at the root = build, test, then `pnpm -r --filter "./packages/*"
+publish --access public`. Publish order is topological, so `core` lands before its dependents.
+
+---
+
+## 7. Playwright is an optional peer, and the failure had to be made recoverable
+
+**Date:** 2026-08-10 · **Status:** active
+
+**Decision.** `playwright` is an optional `peerDependency` of `@glamour-labs/cli`, `@glamour-labs/player`
+and `@glamour-labs/mcp` — never a hard dependency.
+
+**Why optional.** Exactly one command needs it: `glam render`. `new`, `validate` and `preview` do
+not. Making it required would put a ~300MB Chromium download in front of every consumer —
+including a React app that only ever *plays* a glamour and will never rasterize one.
+
+**Why not something lighter.** Considered and rejected: `headless-gl` is WebGL **1** only and would
+mean downgrading the renderer to suit the test tool; `@napi-rs/canvas`/`skia-canvas` are Canvas2D
+only and would mean writing a second renderer — exactly what v2 deleted, and it would resurrect the
+parity problem the pixel oracle exists to solve; `puppeteer` is the same weight for no gain. Driving
+a real browser is not a workaround here, it is the point: the headless PNG comes from the *same*
+renderer that ships to users (§5).
+
+**The part that mattered more than the dependency choice.** Optional only works if the failure is
+*solvable by whoever hits it* — and for this project that is very often an AI agent running the
+cast-glamour self-verify loop, with no signal but the error text. As written, it was not solvable:
+
+- The message always said `pnpm add -D playwright`. For the global CLI install most authors have,
+  that adds the package to the wrong module graph — the fix "works," the retry fails identically,
+  and the loop burns.
+- Two distinct faults shared one message, and the second (package present, browser never
+  downloaded) didn't even reach that handler — `launch()` threw playwright's raw error downstream.
+- Nothing distinguished "your environment is broken" from "your document is broken", so the
+  rational response to an environment failure was to start editing a perfectly valid `.glam`.
+
+So the fix is four things, in `packages/player/src/diagnose.ts`: install-context-aware hints that
+print both forms rather than guessing wrong silently; the two faults split with their own correct
+commands; a `glam doctor` command; and **exit code 3** for "environment", distinct from 1 for
+"bad document". `docs/DECISIONS.md` §3 had already recorded the underlying hazard — *"authoring
+works but verification silently can't run"* — this closes it.
+
+**`glam doctor` launches a real browser rather than stat'ing `executablePath()`.** They are
+different binaries: `executablePath()` names the headed Chromium while a default `launch()` uses
+the headless shell, so a path check can report "ok" on an install that cannot render. A diagnostic
+nobody can trust is worse than none. The real launch costs ~1s, and doctor now uses the same launch
+arguments as `renderToPNG`, so the two cannot drift.

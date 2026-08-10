@@ -1,6 +1,6 @@
 ---
 name: cast-glamour
-description: Author and verify glamour/v0 interactive canvas documents (.glam) — vector+text scenes with pointer/input/state-machine behavior — using the @glam/core format and the glam CLI.
+description: Author and verify glamour/v0 interactive canvas documents (.glam) — vector+text scenes with pointer/input/state-machine behavior — using the @glamour-labs/core format and the glam CLI.
 ---
 
 # cast-glamour
@@ -89,9 +89,9 @@ interface GlamDoc {
 - `bind.expr` / condition values: numbers, `+ - * /`, parens, identifiers from `inputs`, and functions `lerp(a,b,t)`, `clamp(x,lo,hi)`, `min(...)`, `max(...)`, `abs(x)`. No arbitrary JS.
 - **Coordinate anchoring differs by shape** (easy to get wrong — get it right and parts land where you expect): `circle`/`ellipse`/`arc` are anchored at their **center** (`x,y` is the middle); `rect` and `stroke`/`text` use the **top-left** origin. A node with `group: "<id>"` has coords **relative to that group's** `x,y`, not the canvas. So a crab's leg at group-local `(20, 40)` sits at `groupX+20, groupY+40` on the canvas.
 
-## 2. Primitive palette (`@glam/core` `palette` + `listPrimitives()`)
+## 2. Primitive palette (`@glamour-labs/core` `palette` + `listPrimitives()`)
 
-Pull these live with `node -e "console.log(require('@glam/core').listPrimitives())"` (or `import { listPrimitives } from '@glam/core'`) if this doc ever drifts from the source. As of writing:
+Pull these live with `node -e "console.log(require('@glamour-labs/core').listPrimitives())"` (or `import { listPrimitives } from '@glamour-labs/core'`) if this doc ever drifts from the source. As of writing:
 
 | Primitive | Signature | Does |
 |---|---|---|
@@ -119,16 +119,18 @@ See `reference/palette.md` for full call examples and `reference/schema.md` for 
 
 Never hand back a `.glam` that hasn't been validated and rendered. This is not optional polish — it is the acceptance ritual for anything this skill produces.
 
-> **The `glam` command** is a global wrapper (`~/.local/bin/glam`) that runs the built CLI from the
-> Glamour repo — so it works from any directory, no PATH juggling. There is no Node version pin any
-> more (the native `canvas` package went away with Konva). If `glam` errors that a build is missing:
-> ```
-> cd ~/Project/glamour && pnpm build
-> ```
+> **The `glam` command** comes from `npm install -g @glamour-labs/cli`, so it works from any directory.
+> There is no Node version pin (the native `canvas` package went away with Konva). If you are
+> instead running a source checkout and `glam` reports a missing build, build it once with
+> `pnpm build` at the repo root.
 >
 > **`render` needs Chromium.** The renderer is WebGL2, which has no in-process rasterizer, so
 > headless render drives a real browser: `npx playwright install chromium` once. A render takes
 > ~1–2s rather than being instant — budget for that, but do NOT skip it.
+>
+> **Check the environment before blaming the document:** `glam doctor` reports each render
+> prerequisite (the `playwright` package, the Chromium binary, the player bundle) with the exact
+> command that fixes it. Run it once at the start of a session, and any time `render` fails.
 
 Then, for every `.glam` you write or edit:
 ```
@@ -139,7 +141,21 @@ glam render   <file.glam> -o /tmp/glam-preview.png
 - `render` must produce a PNG file. Read it back (image tool / file size / PNG magic bytes `89 50 4E 47`) and actually look at it — confirm the shapes, colors, and layout match intent before calling the work done. A blank or near-empty PNG usually means Chromium is missing or WebGL2 was unavailable, not that the doc is wrong.
 - Optional: `glam preview <file.glam>` serves a live interactive page (`glam-canvas` + UMD player) at a printed URL for a human/browser-QC check of pointer behavior. Close it when done — don't leave dev servers running.
 
-If validate or render fails, that is the loop working as intended: fix the doc and re-run both steps until they pass. Deliver the file path (and PNG path if rendered) only after this passes.
+**Read the exit code before you edit anything.** They mean different things and the wrong reaction wastes a full loop:
+
+| Exit | Meaning | What to do |
+|---|---|---|
+| `0` | passed | continue |
+| `1` | the **document** is wrong | fix the `.glam` — the stderr names the node/state/bind |
+| `3` | the **environment** can't render | run `glam doctor` and install what it names. Do NOT touch the document; it may be perfectly valid |
+
+An exit 3 is never evidence about your `.glam`. Editing the document in response to it is the classic wasted loop — the error will come back byte-identical.
+
+If validate or render fails on the document (exit 1), that is the loop working as intended: fix the doc and re-run both steps until they pass. Deliver the file path (and PNG path if rendered) only after this passes.
+
+**Never report a glamour as verified when render could not run.** If `glam doctor` says the
+environment can't render, say so explicitly in your hand-back — "validated, not rendered, because
+Chromium is missing" — rather than quietly delivering on the strength of `validate` alone.
 
 ## 5. v0.1 — living canvas
 
@@ -314,4 +330,4 @@ multi-stroke) — see [Testing behavior](../../docs/TESTING-BEHAVIOR.md).
 - `reference/schema.md` — full type reference + every semantic validation rule for v0/v0.1 (the v1.1 + Rung 2 additions are summarized in §6/§7 above; `packages/core/src/{schema,validate}.ts` is the source of truth).
 - `reference/palette.md` — palette call signatures with worked before/after examples.
 - `examples/*.glam` — worked examples (v0: hover-grow button, progress bar bound to an input, click-toggle; v0.1: `orbit-loop.glam` — a loop + a group + wander) — all pass `validate` and `renderToPNG`; see `test/examples.test.ts`.
-- Embedding in React: `@glam/react` exposes `<Glamour doc onEmit onStroke onPointer />` + an imperative handle (`send`/`setInput`/`play`/`pause`/`getState`); see `examples/react-crab/` for a real host that keeps scoring in React.
+- Embedding in React: `@glamour-labs/react` exposes `<Glamour doc onEmit onStroke onPointer />` + an imperative handle (`send`/`setInput`/`play`/`pause`/`getState`); see `examples/react-crab/` for a real host that keeps scoring in React.

@@ -45,8 +45,10 @@ node -v   # must print v20.19.4
    `skills/cast-glamour/SKILL.md` §1 exactly — `<nodeId>.<prop>` for binds/set,
    `<nodeId>.<event>` (click/hover/leave only) or `<input> <op> <value>` for `on` keys.
    Write the result to a `.glam` file (pick a short, descriptive filename).
-4. **The `glam` command** is a global wrapper (`~/.local/bin/glam`) → the built repo CLI on Node 20.
-   If it reports a missing build, build the repo once: `cd ~/Project/glamour && pnpm build`.
+4. **The `glam` command** comes from `npm install -g @glamour-labs/cli`; there is no Node version pin.
+   If `render` fails for any reason, run `glam doctor` — it names the missing prerequisite and the
+   command that fixes it. An exit code of `3` means the environment, not your document: do not
+   start editing the `.glam` in response to it.
 5. **Run the mandatory self-verify loop — never skip, never deliver an unrendered file:**
    ```
    glam validate <file.glam>
