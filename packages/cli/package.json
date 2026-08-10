@@ -1,6 +1,6 @@
 {
   "name": "@glamour-labs/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The glam CLI — new, validate, render, preview, and doctor for glamour documents.",
   "keywords": ["glamour", "glam", "cli", "animation", "interactive", "webgl", "canvas"],
   "license": "MIT",
@@ -42,8 +42,8 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "@glamour-labs/core": "^0.1.0",
-    "@glamour-labs/player": "^0.1.0"
+    "@glamour-labs/core": "^0.1.1",
+    "@glamour-labs/player": "^0.1.1"
   },
   "peerDependencies": {
     "playwright": ">=1.49.0"

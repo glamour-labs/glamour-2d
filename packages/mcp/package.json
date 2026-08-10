@@ -1,6 +1,6 @@
 {
   "name": "@glamour-labs/mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server exposing the glamour core operations as tools, so any MCP client can author .glam documents.",
   "keywords": ["glamour", "glam", "mcp", "model-context-protocol", "ai", "animation", "interactive"],
   "license": "MIT",
@@ -42,8 +42,8 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "@glamour-labs/core": "^0.1.0",
-    "@glamour-labs/player": "^0.1.0",
+    "@glamour-labs/core": "^0.1.1",
+    "@glamour-labs/player": "^0.1.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.23.8"
   },
