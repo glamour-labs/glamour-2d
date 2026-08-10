@@ -3,6 +3,8 @@
 The `glam` command — author and verify [Glamour](https://github.com/glamour-labs/glamour-2d)
 documents.
 
+**Requires Node 20+.** Tested on 20 and 22.
+
 ```bash
 npm install -g @glamour-labs/cli
 glam doctor

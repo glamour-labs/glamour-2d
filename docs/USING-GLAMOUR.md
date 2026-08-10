@@ -12,6 +12,18 @@ vector shapes and text that respond to clicks, host inputs, and a state machine.
 
 ## 0. Setup
 
+**Requires Node 20 or newer** — every published package declares `engines: ">=20"`, and CI tests
+20 and 22. Two clarifications worth having up front, because the requirement means different things
+per audience:
+
+- **Embedding a glamour**: the runtime is browser code, so Node never runs it. `>=20` applies only
+  to the toolchain that builds your app — and Next.js 13+ already requires more than that, so in
+  practice this is a non-issue.
+- **Authoring**: the `glam` CLI and `@glamour-labs/mcp` *are* Node programs. There the floor is real.
+
+Node 18 would technically work today (nothing here uses an API newer than `parseArgs`, 18.3+), but
+18 is end-of-life, so it isn't supported or tested.
+
 Two audiences, two setups. Pick the one that matches what you're doing.
 
 ### Playing a glamour in an app (the common case)

@@ -12,6 +12,11 @@ composes interactive animations instead of guessing at them.
 
 ## Install
 
+> **Node 20 or newer** (`engines: ">=20"`). Tested on 20 and 22 in CI. The *runtime* is browser
+> code and doesn't care what Node you run — this is your toolchain's floor, and any Next.js 13+
+> project already exceeds it. The `glam` CLI and the MCP server are Node programs, so for those it
+> is a hard requirement.
+
 There are two audiences here, and they need different things. Deciding which one you are is the
 whole of the setup:
 

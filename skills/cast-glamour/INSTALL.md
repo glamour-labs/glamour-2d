@@ -7,9 +7,11 @@ directories on disk, so installing it means copying it into your Claude configur
 ## 1. The CLI it depends on
 
 The skill shells out to `glam validate` and `glam render`. Without the CLI it can still author, but
-it cannot *verify*, which is the part that makes AI authoring trustworthy. Install it first:
+it cannot *verify*, which is the part that makes AI authoring trustworthy. Install it first —
+**Node 20 or newer required**, since the CLI is a Node program:
 
 ```bash
+node -v                                                        # must be >= 20
 npm install -g @glamour-labs/cli
 npm install -g playwright && npx playwright install chromium   # for `glam render`
 glam doctor                                                    # confirm both landed

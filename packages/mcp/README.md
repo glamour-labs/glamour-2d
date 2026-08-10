@@ -3,6 +3,8 @@
 MCP server exposing [Glamour](https://github.com/glamour-labs/glamour-2d)'s core operations as
 tools, so any MCP client can author `.glam` documents.
 
+**Requires Node 20+.** Tested on 20 and 22.
+
 ```bash
 npm install -g @glamour-labs/mcp
 ```
