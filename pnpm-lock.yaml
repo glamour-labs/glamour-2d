@@ -47,10 +47,10 @@ importers:
 
   apps/studio:
     dependencies:
-      '@glam/core':
+      '@glamour-labs/core':
         specifier: '*'
         version: link:../../packages/core
-      '@glam/player':
+      '@glamour-labs/player':
         specifier: '*'
         version: link:../../packages/player
       react:
@@ -90,20 +90,20 @@ importers:
 
   examples/alphabet:
     dependencies:
-      '@glam/core':
+      '@glamour-labs/core':
         specifier: '*'
         version: link:../../packages/core
     devDependencies:
-      '@glam/player':
+      '@glamour-labs/player':
         specifier: '*'
         version: link:../../packages/player
 
   examples/react-crab:
     dependencies:
-      '@glam/core':
+      '@glamour-labs/core':
         specifier: '*'
         version: link:../../packages/core
-      '@glam/react':
+      '@glamour-labs/react':
         specifier: '*'
         version: link:../../packages/react
       react:
@@ -131,12 +131,15 @@ importers:
 
   packages/cli:
     dependencies:
-      '@glam/core':
-        specifier: '*'
+      '@glamour-labs/core':
+        specifier: ^0.1.0
         version: link:../core
-      '@glam/player':
-        specifier: '*'
+      '@glamour-labs/player':
+        specifier: ^0.1.0
         version: link:../player
+      playwright:
+        specifier: '>=1.49.0'
+        version: 1.62.1
     devDependencies:
       '@types/node':
         specifier: ^22.9.0
@@ -169,15 +172,18 @@ importers:
 
   packages/mcp:
     dependencies:
-      '@glam/core':
-        specifier: '*'
+      '@glamour-labs/core':
+        specifier: ^0.1.0
         version: link:../core
-      '@glam/player':
-        specifier: '*'
+      '@glamour-labs/player':
+        specifier: ^0.1.0
         version: link:../player
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(zod@3.25.76)
+      playwright:
+        specifier: '>=1.49.0'
+        version: 1.62.1
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -194,8 +200,8 @@ importers:
 
   packages/player:
     dependencies:
-      '@glam/core':
-        specifier: '*'
+      '@glamour-labs/core':
+        specifier: ^0.1.0
         version: link:../core
       xstate:
         specifier: ^5.32.5
@@ -219,11 +225,11 @@ importers:
 
   packages/react:
     dependencies:
-      '@glam/core':
-        specifier: '*'
+      '@glamour-labs/core':
+        specifier: ^0.1.0
         version: link:../core
-      '@glam/player':
-        specifier: '*'
+      '@glamour-labs/player':
+        specifier: ^0.1.0
         version: link:../player
     devDependencies:
       '@testing-library/react':
@@ -259,11 +265,11 @@ importers:
 
   skills/cast-glamour:
     dependencies:
-      '@glam/core':
+      '@glamour-labs/core':
         specifier: '*'
         version: link:../../packages/core
     devDependencies:
-      '@glam/player':
+      '@glamour-labs/player':
         specifier: '*'
         version: link:../../packages/player
       typescript:

@@ -1,8 +1,21 @@
 {
-  "name": "@glam/core",
+  "name": "@glamour-labs/core",
   "version": "0.1.0",
-  "private": true,
+  "description": "Headless engine for the glamour/v0 format — schema, validate, applyOps, and the env-agnostic scene + state-machine builder.",
+  "keywords": ["glamour", "glam", "animation", "interactive", "webgl", "vector", "canvas"],
+  "license": "MIT",
+  "author": "Kha Vu",
+  "homepage": "https://github.com/glamour-labs/glamour-2d#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glamour-labs/glamour-2d.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/glamour-labs/glamour-2d/issues"
+  },
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -11,10 +24,17 @@
       "import": "./dist/index.js"
     }
   },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
     "zod": "^3.23.8"

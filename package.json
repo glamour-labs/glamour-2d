@@ -1,5 +1,17 @@
 {
+  "name": "glamour-2d",
   "private": true,
+  "description": "An AI-native format and runtime for interactive, animated 2D canvases.",
+  "license": "MIT",
+  "author": "Kha Vu",
+  "homepage": "https://github.com/glamour-labs/glamour-2d#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glamour-labs/glamour-2d.git"
+  },
+  "bugs": {
+    "url": "https://github.com/glamour-labs/glamour-2d/issues"
+  },
   "type": "module",
   "workspaces": [
     "packages/*",
@@ -9,8 +21,9 @@
   "scripts": {
     "build": "pnpm -r build",
     "test": "vitest run",
-    "typecheck": "tsc -b",
-    "playground": "node scripts/serve.mjs"
+    "typecheck": "pnpm -r typecheck",
+    "playground": "node scripts/serve.mjs",
+    "release": "pnpm build && pnpm test && pnpm -r --filter \"./packages/*\" publish --access public"
   },
   "devDependencies": {
     "@testing-library/react": "^16.0.1",

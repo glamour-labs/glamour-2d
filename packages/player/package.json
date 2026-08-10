@@ -1,8 +1,21 @@
 {
-  "name": "@glam/player",
+  "name": "@glamour-labs/player",
   "version": "0.1.0",
-  "private": true,
+  "description": "Browser runtime for glamour documents — renderGlamour, the <glam-canvas> web component, self-contained HTML export, and a headless drive-and-assert harness.",
+  "keywords": ["glamour", "glam", "animation", "interactive", "webgl", "webgl2", "web-component", "canvas"],
+  "license": "MIT",
+  "author": "Kha Vu",
+  "homepage": "https://github.com/glamour-labs/glamour-2d#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glamour-labs/glamour-2d.git",
+    "directory": "packages/player"
+  },
+  "bugs": {
+    "url": "https://github.com/glamour-labs/glamour-2d/issues"
+  },
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -15,14 +28,29 @@
       "import": "./dist/node.js"
     }
   },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "rm -rf dist && tsup",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "@glam/core": "*",
+    "@glamour-labs/core": "^0.1.0",
     "xstate": "^5.32.5"
+  },
+  "peerDependencies": {
+    "playwright": ">=1.49.0"
+  },
+  "peerDependenciesMeta": {
+    "playwright": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "^5.6.3",
