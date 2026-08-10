@@ -1,0 +1,128 @@
+name: CI
+
+# Two jobs, because they answer different questions:
+#   test        — does the code still work?
+#   pack-check  — would a publish ship something usable?
+#
+# `pull_request` covers work arriving from a fork; `push: main` covers direct
+# pushes, which a solo repo does constantly. `workflow_dispatch` lets any branch
+# be run on demand without opening a PR first.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A second push to the same branch cancels the first — no point finishing a run
+# whose commit is already superseded.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Reads the version from package.json's `packageManager` field.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # NOT .nvmrc: that file pins 20.19.4, which existed only for the
+          # native `canvas` ABI and was made obsolete when the WebGL2 renderer
+          # replaced Konva (DECISIONS §5). 22 is current LTS and closer to what
+          # consumers actually run.
+          node-version: 22
+          cache: pnpm
+
+      # --frozen-lockfile makes a stale pnpm-lock.yaml a build failure rather
+      # than something CI silently papers over by resolving fresh versions.
+      - run: pnpm install --frozen-lockfile
+
+      # Chromium is ~150MB and the download dominates a cold run. Keyed on the
+      # lockfile so it re-downloads only when the playwright version moves.
+      - name: Cache Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      # --with-deps pulls the system libraries headless Chromium needs on a bare
+      # runner. Without it the browser installs but cannot start.
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - run: pnpm build
+
+      - run: pnpm typecheck
+
+      # Two test projects: pure-node logic, and scene/paint/ink tests that need a
+      # real browser because the renderer is WebGL2 and jsdom has no GL context
+      # at all.
+      - run: pnpm test
+
+  pack-check:
+    # The failure this exists to catch is silent: `dist/` is gitignored, so a
+    # package without an explicit `files` field would publish SUCCESSFULLY while
+    # shipping source and no build output. Asserting the built artifacts are
+    # inside the tarball is the only way to see it before consumers do.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      - name: every publishable package ships its dist
+        run: |
+          set -euo pipefail
+          for pkg in core player react cli mcp; do
+            echo "--- @glamour-labs/$pkg"
+            files=$(cd "packages/$pkg" && npm pack --dry-run --json | node -e '
+              let s = "";
+              process.stdin.on("data", d => s += d).on("end", () => {
+                const entries = JSON.parse(s)[0].files.map(f => f.path);
+                console.log(entries.join("\n"));
+              });
+            ')
+            echo "$files" | sed 's/^/    /'
+            echo "$files" | grep -q '^dist/' \
+              || { echo "FAIL: no dist/ in the @glamour-labs/$pkg tarball"; exit 1; }
+          done
+
+      - name: the player tarball carries the UMD bundle renderToPNG reads
+        run: |
+          set -euo pipefail
+          cd packages/player
+          npm pack --dry-run --json \
+            | node -e '
+              let s = "";
+              process.stdin.on("data", d => s += d).on("end", () => {
+                const files = JSON.parse(s)[0].files.map(f => f.path);
+                if (!files.includes("dist/glam-player.umd.js")) {
+                  console.error("FAIL: dist/glam-player.umd.js missing — glam render would break for every consumer");
+                  process.exit(1);
+                }
+                console.log("ok: UMD bundle present");
+              });
+            '
+
+      - name: the react entry ships 'use client'
+        # Regression guard for the one defect that would silently break every
+        # Next.js App Router consumer. tsup relocates a source-level directive
+        # below the bundle preamble, so this must be the file's first bytes.
+        run: |
+          set -euo pipefail
+          head -c 12 packages/react/dist/index.js | grep -q "use client" \
+            || { echo "FAIL: 'use client' is not at the top of @glamour-labs/react"; exit 1; }
+          echo "ok: 'use client' present"
