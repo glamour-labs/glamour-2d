@@ -69,25 +69,44 @@ export function findUmdBundle(): string | null {
   return null;
 }
 
+/** How this copy of the code is being run. Reported by `glam doctor`. */
+export type InstallKind = 'source-checkout' | 'global-install' | 'project-dependency';
+
 /**
- * Whether this module is running from outside the current project tree — i.e.
- * a global `glam` install rather than a workspace dependency.
+ * Classify how this module is installed.
  *
  * This decides which install command leads, because they are NOT
  * interchangeable: a globally-installed CLI resolves `playwright` from the
  * global node_modules root and will never see a package added to the project's
- * devDependencies. Getting this backwards is precisely the trap that made the
- * old message useless — it always said `pnpm add -D playwright`, which is a
- * no-op for the global install that most authors have.
+ * devDependencies. Getting this backwards is the trap that made the old message
+ * useless — it always said `pnpm add -D playwright`, a no-op for the global
+ * install most authors have.
  *
- * The heuristic can't be perfect (you may run a project-local CLI from another
- * directory), so callers print the alternative alongside rather than relying on
- * it alone.
+ * Decided by whether the module sits inside a `node_modules` directory, not by
+ * comparing against `process.cwd()`. An earlier version did the latter and
+ * mislabelled a source checkout as "project-local" whenever it was invoked from
+ * a parent directory — running the wrapper from `$HOME` made everything under
+ * `$HOME` look project-local. cwd describes where you are standing, not how the
+ * code got there.
+ *
+ * Still a heuristic for the global-vs-project split (a project dependency and a
+ * global install both live in `node_modules`), which is why callers print both
+ * commands rather than trusting this alone.
+ */
+export function installKind(): InstallKind {
+  const self = path.resolve(fileURLToPath(import.meta.url));
+  if (!self.includes(`${path.sep}node_modules${path.sep}`)) return 'source-checkout';
+  const cwd = path.resolve(process.cwd());
+  return self.startsWith(cwd + path.sep) ? 'project-dependency' : 'global-install';
+}
+
+/**
+ * True when playwright must be installed globally rather than into a project.
+ * A source checkout takes the project-style command (`pnpm add -D`), since that
+ * is what a workspace wants.
  */
 export function isGlobalInstall(): boolean {
-  const self = path.resolve(fileURLToPath(import.meta.url));
-  const cwd = path.resolve(process.cwd());
-  return !self.startsWith(cwd + path.sep);
+  return installKind() === 'global-install';
 }
 
 /** Install commands for playwright, likeliest-correct first. */

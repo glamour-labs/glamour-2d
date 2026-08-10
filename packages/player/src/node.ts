@@ -13,9 +13,10 @@ export {
   diagnoseRenderEnv,
   findUmdBundle,
   GlamRenderEnvError,
+  installKind,
   isGlobalInstall,
   playwrightInstallHint,
   umdBundleCandidates,
   EXIT_MISSING_RENDER_DEP,
 } from './diagnose.js';
-export type { EnvCheck, RenderEnvFault } from './diagnose.js';
+export type { EnvCheck, InstallKind, RenderEnvFault } from './diagnose.js';

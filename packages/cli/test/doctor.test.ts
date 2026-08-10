@@ -1,5 +1,23 @@
 import { expect, test } from 'vitest';
+import { installKind } from '@glamour-labs/player/node';
 import { doctorCommand, formatDoctorReport } from '../src/commands/doctor.js';
+
+test('classifies a source checkout as such, regardless of the cwd it is run from', () => {
+  // Regression: the first version compared the module path against process.cwd(),
+  // so invoking the CLI from a parent directory (e.g. the global wrapper run from
+  // $HOME) mislabelled this source checkout as a "project-local install" and led
+  // with the wrong install command. cwd says where you stand, not how the code
+  // got there — the classification must key off `node_modules` instead.
+  expect(installKind()).toBe('source-checkout');
+
+  const original = process.cwd();
+  try {
+    process.chdir(original.split('/').slice(0, -3).join('/') || '/');
+    expect(installKind()).toBe('source-checkout');
+  } finally {
+    process.chdir(original);
+  }
+});
 
 test('reports every render prerequisite, and passes in a built dev checkout', async () => {
   const report = await doctorCommand();

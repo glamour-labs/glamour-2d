@@ -28,19 +28,19 @@ map; DECISIONS is the *why* of settled choices; BUILD-NOTES is the build/finding
 
 | Path | Role |
 |---|---|
-| `~/Project/glamour` | **LIVE** — this repo, the WebGL2 engine |
+|  `~/Project/glamour-2d` | **LIVE** — this repo, the WebGL2 engine |
 | `~/Project/glamour-v1-oracle` | retired Konva engine, kept ONLY as the pixel oracle |
 
 The names are deliberate: the live project holds the plain name, and the oracle's name states its
-only remaining job. Pointing a gate at `~/Project/glamour` instead of the oracle would compare this
+only remaining job. Pointing a gate at  `~/Project/glamour-2d` instead of the oracle would compare this
 repo against itself — everything would MATCH and prove nothing.
 
 The global authoring path now runs v2. All three artifacts were repointed:
 
 | Artifact | Now |
 |---|---|
-| `~/.local/bin/glam` | `node ~/Project/glamour/packages/cli/dist/cli.js` — **no Node pin** |
-| `~/.claude/skills/cast-glamour/` | **symlink** → `~/Project/glamour/skills/cast-glamour` (edits are live; nothing to re-copy) |
+| `~/.local/bin/glam` | `node ~/Project/glamour-2d/packages/cli/dist/cli.js` — **no Node pin** |
+| `~/.claude/skills/cast-glamour/` | **symlink** → `~/Project/glamour-2d/skills/cast-glamour` (edits are live; nothing to re-copy) |
 | `~/.claude/agents/glamour-smith.md` | Node-20 block replaced by the Chromium prerequisite |
 
 Verified from a neutral directory on **Node 24** (v1 cannot run there at all — it needs the Node-20

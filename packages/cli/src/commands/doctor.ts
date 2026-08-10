@@ -1,4 +1,10 @@
-import { diagnoseRenderEnv, isGlobalInstall, type EnvCheck } from '@glamour-labs/player/node';
+import { diagnoseRenderEnv, installKind, type EnvCheck } from '@glamour-labs/player/node';
+
+const INSTALL_LABEL = {
+  'source-checkout': 'source checkout',
+  'global-install': 'global install',
+  'project-dependency': 'project dependency',
+} as const;
 
 export interface DoctorReport {
   checks: EnvCheck[];
@@ -22,7 +28,7 @@ export async function doctorCommand(): Promise<DoctorReport> {
 /** Render the report for a terminal. Returns the text so tests can assert it. */
 export function formatDoctorReport(report: DoctorReport): string {
   const lines: string[] = [];
-  lines.push(`glam doctor — ${isGlobalInstall() ? 'global' : 'project-local'} install`);
+  lines.push(`glam doctor — ${INSTALL_LABEL[installKind()]}`);
   lines.push('');
 
   for (const check of report.checks) {
