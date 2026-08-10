@@ -39,9 +39,14 @@ The global authoring path now runs v2. All three artifacts were repointed:
 
 | Artifact | Now |
 |---|---|
-| `~/.local/bin/glam` | `node ~/Project/glamour-2d/packages/cli/dist/cli.js` — **no Node pin** |
-| `~/.claude/skills/cast-glamour/` | **symlink** → `~/Project/glamour-2d/skills/cast-glamour` (edits are live; nothing to re-copy) |
+| `glam` | the **published CLI** — `npm install -g @glamour-labs/cli`. Self-contained: it carries its own `@glamour-labs/player`, so the UMD bundle `renderToPNG` reads comes from `node_modules`, not from a checkout. No repo required to author. |
+| `playwright` | installed globally alongside it (`npm install -g playwright`). Optional peer — only `glam render` needs it, and a global CLI cannot see a project's devDependencies. |
+| `~/.local/bin/glam-dev` | wrapper → `node ~/Project/glamour-2d/packages/cli/dist/cli.js`, kept for engine work against the source checkout. Was `glam` until the published CLI took that name — it sat first on `PATH` and would otherwise shadow it silently. |
+| `~/.claude/skills/cast-glamour/` | **symlink** → `~/Project/glamour-2d/skills/cast-glamour` (edits are live; nothing to re-copy). The skill is a directory Claude discovers on disk, so this one *does* still need the repo. |
 | `~/.claude/agents/glamour-smith.md` | Node-20 block replaced by the Chromium prerequisite |
+
+`glam doctor` names which of the two you are running — `global install` vs `source checkout` —
+so the two never get confused.
 
 Verified from a neutral directory on **Node 24** (v1 cannot run there at all — it needs the Node-20
 `canvas` ABI): `glam new` / `validate` / `render` all pass, render takes ~1.4s via headless Chromium
