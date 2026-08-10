@@ -24,6 +24,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    strategy:
+      # Both versions report, so a failure on one doesn't hide the other's result.
+      fail-fast: false
+      matrix:
+        # These are not arbitrary: they are the ends of the range the packages
+        # advertise as `engines.node: ">=20"`. 20 is the floor, 22 is what
+        # .nvmrc says we develop on. Publishing a floor nobody tests is the kind
+        # of unverified claim this workflow exists to prevent — if 20 is dropped
+        # from here, drop it from `engines` too.
+        node: [20, 22]
+
+    name: test (node ${{ matrix.node }})
+
     steps:
       - uses: actions/checkout@v4
 
@@ -32,11 +45,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          # NOT .nvmrc: that file pins 20.19.4, which existed only for the
-          # native `canvas` ABI and was made obsolete when the WebGL2 renderer
-          # replaced Konva (DECISIONS §5). 22 is current LTS and closer to what
-          # consumers actually run.
-          node-version: 22
+          node-version: ${{ matrix.node }}
           cache: pnpm
 
       # --frozen-lockfile makes a stale pnpm-lock.yaml a build failure rather
@@ -49,7 +58,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          key: playwright-${{ runner.os }}-node${{ matrix.node }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       # --with-deps pulls the system libraries headless Chromium needs on a bare
       # runner. Without it the browser installs but cannot start.
