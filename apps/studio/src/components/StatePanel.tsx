@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { GlamPlayer } from '@glam/player';
+import type { GlamPlayer } from '@glamour-labs/player';
 
 interface StatePanelProps {
   player: GlamPlayer | null;

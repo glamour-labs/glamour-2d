@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, expect, test, vi } from 'vitest';
-import type { GlamDoc } from '@glam/core';
+import type { GlamDoc } from '@glamour-labs/core';
 import { defineGlamCanvas, GlamCanvasElement } from '../src/webcomponent.js';
 
 const doc: GlamDoc = {

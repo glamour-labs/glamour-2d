@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { validate, type GlamDoc } from '@glam/core';
-import { exportInlineHTML } from '@glam/player/node';
+import { validate, type GlamDoc } from '@glamour-labs/core';
+import { exportInlineHTML } from '@glamour-labs/player/node';
 
 export interface PreviewHandle {
   url: string;

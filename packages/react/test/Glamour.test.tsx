@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from 'vitest';
 import { createRef } from 'react';
 import { cleanup, render } from '@testing-library/react';
-import type { GlamDoc } from '@glam/core';
+import type { GlamDoc } from '@glamour-labs/core';
 import { Glamour, type GlamourHandle } from '../src/index.js';
 
 afterEach(cleanup);

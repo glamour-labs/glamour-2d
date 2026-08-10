@@ -282,7 +282,7 @@ if (v1Easings.error) {
 } else {
   const { applyEaseForTest } = await import('../packages/core/dist/index.js');
   if (typeof applyEaseForTest !== 'function') {
-    console.log('  SKIPPED — @glam/core does not export applyEaseForTest');
+    console.log('  SKIPPED — @glamour-labs/core does not export applyEaseForTest');
     easingRows.push({ name: '(all)', status: 'NOT-RUN', reason: 'applyEaseForTest not exported' });
   } else {
     for (const [name, info] of Object.entries(v1Easings)) {

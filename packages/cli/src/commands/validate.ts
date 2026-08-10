@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { validate } from '@glam/core';
+import { validate } from '@glamour-labs/core';
 
 export interface ValidateCommandResult {
   ok: boolean;

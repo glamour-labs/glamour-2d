@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { createActor } from 'xstate';
-import type { GlamDoc } from '@glam/core';
+import type { GlamDoc } from '@glamour-labs/core';
 import { toXState } from '../src/machine.js';
 
 const clickDoc: GlamDoc = {

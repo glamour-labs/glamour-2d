@@ -18,7 +18,7 @@ repo. It is not a dependency; it is the spec.
 | Node version | pinned 20.19.4 (native `canvas` ABI) | **unpinned** |
 | Test environment | jsdom everywhere | split: node + real Chromium |
 | Scene builder | `buildScene(Konva, doc, mount)` | `buildScene(doc, mount, opts?)` |
-| `renderToPNG` | `@glam/core` | `@glam/player/node` |
+| `renderToPNG` | `@glamour-labs/core` | `@glamour-labs/player/node` |
 
 Both schema ids stay valid — `glamour/v0` and `glamour/v0.1`. Introducing a
 `glamour/v2` id would have forced an edit to all 18 documents for no gain.
@@ -147,7 +147,7 @@ a node click, and the two versions dispatch clicks through different event syste
 like-for-like input. Check A covers the interpolation math instead.
 
 > **A mutation test only proves anything if the mutation reaches the tested
-> artifact.** The first attempt rebuilt `@glam/core` only — but check B reads the
+> artifact.** The first attempt rebuilt `@glamour-labs/core` only — but check B reads the
 > *player's* UMD bundle, which bundles core. The mutation never shipped, the gate
 > reported MATCH, and it briefly looked blind. Always `pnpm -r build`.
 

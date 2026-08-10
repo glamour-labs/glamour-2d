@@ -7,7 +7,7 @@ A minimal third-party page (not part of the library) that embeds `demo.glam` two
 ## Run it
 ```bash
 # 1. build the player, then copy the UMD bundle next to this page:
-pnpm --filter @glam/player build     # (from repo root, Node 20)
+pnpm --filter @glamour-labs/player build     # (from repo root, Node 20)
 cp ../../packages/player/dist/glam-player.umd.js .
 # 2. serve (fetch needs http, not file://):
 python3 -m http.server 8123

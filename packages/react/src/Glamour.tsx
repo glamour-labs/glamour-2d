@@ -5,14 +5,14 @@ import {
   useRef,
   type CSSProperties,
 } from 'react';
-import type { GlamDoc } from '@glam/core';
+import type { GlamDoc } from '@glamour-labs/core';
 import {
   renderGlamour,
   type GlamPlayer,
   type GlamEmitEvent,
   type GlamPointerEvent,
   type GlamStrokeEvent,
-} from '@glam/player';
+} from '@glamour-labs/player';
 
 /**
  * Imperative handle exposed via `ref` — the host drives the canvas through this

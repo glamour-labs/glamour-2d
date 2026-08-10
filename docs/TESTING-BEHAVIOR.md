@@ -20,10 +20,10 @@ an automated regression guard.
    is where the subtle bugs live (a handle that jumps, ink that runs ahead, an
    arrow that flips early) — none of which show up if you only test the happy path.
 
-## API (`@glam/player`)
+## API (`@glamour-labs/player`)
 
 ```ts
-import { createHarness } from '@glam/player';
+import { createHarness } from '@glamour-labs/player';
 
 const h = createHarness(doc);          // renders headless (jsdom/browser DOM)
 

@@ -2,9 +2,9 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
-import { validate } from '@glam/core';
+import { validate } from '@glamour-labs/core';
 // v2: headless render lives in the player (headless Chromium), not core.
-import { renderToPNG } from '@glam/player/node';
+import { renderToPNG } from '@glamour-labs/player/node';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const examplesDir = join(here, '..', 'examples');

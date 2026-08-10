@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from 'vitest';
-import { buildScene, konvaMethodFor, type GlamDoc, type SceneHandle } from '@glam/core';
+import { buildScene, konvaMethodFor, type GlamDoc, type SceneHandle } from '@glamour-labs/core';
 import { RunLoop } from '../src/loop.js';
 
 const doc: GlamDoc = {
@@ -59,9 +59,9 @@ test('pause halts advancement; play resumes', () => {
   expect(scene.byId.crab.x()).toBeCloseTo(100, 5);
 });
 
-test('RunLoop resolves loop props via the single-sourced @glam/core konvaMethodFor (fix: de-duped from loop.ts)', () => {
+test('RunLoop resolves loop props via the single-sourced @glamour-labs/core konvaMethodFor (fix: de-duped from loop.ts)', () => {
   // Regression for the PROP_TO_KONVA_METHOD/konvaMethodFor de-dup: loop.ts no
-  // longer declares its own copy — it imports directly from @glam/core, so
+  // longer declares its own copy — it imports directly from @glamour-labs/core, so
   // both scene.ts and loop.ts always resolve a doc-facing prop name to the
   // exact same Konva accessor.
   expect(konvaMethodFor('r')).toBe('radius');

@@ -1,6 +1,6 @@
-// Browser-safe entry point (`@glam/player`). Node-only helpers (e.g.
+// Browser-safe entry point (`@glamour-labs/player`). Node-only helpers (e.g.
 // `exportInlineHTML`, which statically imports `node:fs`/`node:path`/
-// `node:url`) live in `./node.ts`, exposed as the `@glam/player/node`
+// `node:url`) live in `./node.ts`, exposed as the `@glamour-labs/player/node`
 // subpath export — see docs/superpowers/BUILD-NOTES.md finding #1.
 export { renderGlamour } from './player.js';
 export type {

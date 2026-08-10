@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { GlamDoc } from '@glam/core';
+import type { GlamDoc } from '@glamour-labs/core';
 
 interface UsePanelProps {
   doc: GlamDoc | null;

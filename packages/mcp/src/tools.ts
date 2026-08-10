@@ -9,9 +9,9 @@ import {
   type GlamBind,
   type Op,
   type ValidateResult,
-} from '@glam/core';
+} from '@glamour-labs/core';
 // v2: headless render lives in the player (headless Chromium), not core.
-import { renderToPNG } from '@glam/player/node';
+import { renderToPNG } from '@glamour-labs/player/node';
 
 /** Names of every MCP tool exposed over core, in registration order. */
 export const TOOL_NAMES = [

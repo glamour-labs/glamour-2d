@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, expect, test } from 'vitest';
-import { starterDoc as coreStarterDoc, validate } from '@glam/core';
+import { starterDoc as coreStarterDoc, validate } from '@glamour-labs/core';
 import { newCommand, starterDoc } from '../src/commands/new.js';
 
 let dir: string;
@@ -28,6 +28,6 @@ test('writes a starter .glam that validates ok', () => {
   expect(result.errors).toEqual([]);
 });
 
-test('cli starterDoc is single-sourced from @glam/core, not a hand-typed duplicate (fix #12)', () => {
+test('cli starterDoc is single-sourced from @glamour-labs/core, not a hand-typed duplicate (fix #12)', () => {
   expect(starterDoc).toEqual(coreStarterDoc);
 });

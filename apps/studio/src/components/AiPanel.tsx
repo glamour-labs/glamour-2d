@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { listPrimitives, palette, type GlamDoc, type Op } from '@glam/core';
+import { listPrimitives, palette, type GlamDoc, type Op } from '@glamour-labs/core';
 
 interface AiPanelProps {
   doc: GlamDoc;

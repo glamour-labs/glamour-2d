@@ -1,5 +1,5 @@
 {
-  "name": "@glam/example-alphabet",
+  "name": "@glamour-labs/example-alphabet",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -8,9 +8,9 @@
     "check": "node build.mjs --check"
   },
   "dependencies": {
-    "@glam/core": "*"
+    "@glamour-labs/core": "*"
   },
   "devDependencies": {
-    "@glam/player": "*"
+    "@glamour-labs/player": "*"
   }
 }

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { validate, type GlamDoc, type Op, applyOps } from '@glam/core';
-import type { GlamPlayer } from '@glam/player';
+import { validate, type GlamDoc, type Op, applyOps } from '@glamour-labs/core';
+import type { GlamPlayer } from '@glamour-labs/player';
 import { JsonEditor } from './components/JsonEditor.js';
 import { Preview } from './components/Preview.js';
 import { InputPanel } from './components/InputPanel.js';

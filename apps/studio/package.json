@@ -1,5 +1,5 @@
 {
-  "name": "@glam/studio",
+  "name": "@glamour-labs/studio",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,8 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@glam/core": "*",
-    "@glam/player": "*",
+    "@glamour-labs/core": "*",
+    "@glamour-labs/player": "*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

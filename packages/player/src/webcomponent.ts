@@ -1,4 +1,4 @@
-import { validate, type GlamDoc } from '@glam/core';
+import { validate, type GlamDoc } from '@glamour-labs/core';
 import { renderGlamour, type GlamPlayer } from './player.js';
 
 const TAG_NAME = 'glam-canvas';

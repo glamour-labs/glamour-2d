@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Glamour, type GlamourHandle, type GlamDoc, type GlamEmitEvent, type GlamPointerEvent } from '@glam/react';
+import { Glamour, type GlamourHandle, type GlamDoc, type GlamEmitEvent, type GlamPointerEvent } from '@glamour-labs/react';
 import crabJson from './crab.json';
 import manifest from './crab-letters.json';
 

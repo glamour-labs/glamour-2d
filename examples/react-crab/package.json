@@ -1,5 +1,5 @@
 {
-  "name": "@glam/example-react-crab",
+  "name": "@glamour-labs/example-react-crab",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,8 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@glam/core": "*",
-    "@glam/react": "*",
+    "@glamour-labs/core": "*",
+    "@glamour-labs/react": "*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

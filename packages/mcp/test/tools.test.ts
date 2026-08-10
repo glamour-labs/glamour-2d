@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import type { GlamDoc } from '@glam/core';
+import type { GlamDoc } from '@glamour-labs/core';
 import { handlers } from '../src/tools.js';
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47]);

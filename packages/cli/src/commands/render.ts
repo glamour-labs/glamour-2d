@@ -1,8 +1,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { type GlamDoc } from '@glam/core';
+import { type GlamDoc } from '@glamour-labs/core';
 // v2: headless render moved to the player (headless Chromium) — the WebGL
 // backend has no in-process rasterizer.
-import { renderToPNG } from '@glam/player/node';
+import { renderToPNG } from '@glamour-labs/player/node';
 
 export interface RenderCommandOpts {
   state?: string;

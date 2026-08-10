@@ -21,7 +21,7 @@ import {
   type GlamPointerEvent,
   type GlamGuidedEvent,
 } from './player.js';
-import type { GlamDoc } from '@glam/core';
+import type { GlamDoc } from '@glamour-labs/core';
 
 /** A node's live, readable props at the moment of the call. */
 export interface NodeSnapshot {

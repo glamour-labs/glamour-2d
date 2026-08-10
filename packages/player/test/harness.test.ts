@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from 'vitest';
-import type { GlamDoc } from '@glam/core';
+import type { GlamDoc } from '@glamour-labs/core';
 import { createHarness, type Harness } from '../src/harness.js';
 
 let h: Harness;

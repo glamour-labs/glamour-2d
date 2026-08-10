@@ -11,7 +11,7 @@ map; DECISIONS is the *why* of settled choices; BUILD-NOTES is the build/finding
   `backInOut`/`elasticOut` easing. Radius-family props clamp to ≥0 (overshoot safety).
 - **Rung 2 "input + ink" shipped** — `stroke` node, doc-level `ink` block, player `onPointer`/`onStroke`
   host API, pure `traceMatch`. Unlocks alphabet-trace.
-- **`@glam/react` shipped** — `<Glamour>` component + imperative handle; the idiomatic React embed.
+- **`@glamour-labs/react` shipped** — `<Glamour>` component + imperative handle; the idiomatic React embed.
 - **Mission acceptance test PASSED** — a v0.1 crab was authored by *describing* it to the AI skill
   (`examples/ai-authored/crab.glam`) and embedded in a real React app (`examples/react-crab`) with all
   scoring/timer logic in React. Both halves the roadmap flagged as never-run are now done.
@@ -77,8 +77,8 @@ node scripts/frame-parity.mjs ~/Project/glamour-v1-oracle  frame-parity-out
 native `canvas`, which is exactly the pin v2 dropped.
 
 Note: `pnpm -r build` in v1 FAILS at `apps/studio` (the pre-existing `onGuided` mock bug). The oracle
-packages still build, so this is survivable — but build `--filter @glam/core --filter @glam/player
---filter @glam/cli` if you want a clean exit.
+packages still build, so this is survivable — but build `--filter @glamour-labs/core --filter @glamour-labs/player
+--filter @glamour-labs/cli` if you want a clean exit.
 
 ## The mission (why this exists)
 Glamour is the maintainer's **own tool to author complex interactions himself** — no designer, no

@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { starterDoc } from '@glam/core';
+import { starterDoc } from '@glamour-labs/core';
 import { App } from '../src/App.js';
 import { STARTER_DOC_JSON } from '../src/starterDoc.js';
 
@@ -58,6 +58,6 @@ test('selecting a palette primitive on a node updates the doc and keeps it valid
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
 
-test('Studio starter doc is single-sourced from @glam/core, not a hand-typed duplicate (fix #12)', () => {
+test('Studio starter doc is single-sourced from @glamour-labs/core, not a hand-typed duplicate (fix #12)', () => {
   expect(JSON.parse(STARTER_DOC_JSON)).toEqual(starterDoc);
 });

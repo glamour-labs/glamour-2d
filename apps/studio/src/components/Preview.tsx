@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import type { GlamDoc } from '@glam/core';
-import { renderGlamour, type GlamPlayer } from '@glam/player';
+import type { GlamDoc } from '@glamour-labs/core';
+import { renderGlamour, type GlamPlayer } from '@glamour-labs/player';
 
 interface PreviewProps {
   doc: GlamDoc;

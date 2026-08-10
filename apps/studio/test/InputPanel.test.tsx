@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
-import type { GlamPlayer } from '@glam/player';
+import type { GlamPlayer } from '@glamour-labs/player';
 import { InputPanel } from '../src/components/InputPanel.js';
 
 afterEach(() => {

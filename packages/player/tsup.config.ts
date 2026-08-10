@@ -12,7 +12,7 @@ const NODE_EXTERNAL = ['playwright', 'playwright-core'];
 // renderToPNG. `dist` is removed once by the package's build script instead.
 export default defineConfig([
   {
-    // Browser-safe library entry (`@glam/player`) for bundler consumers
+    // Browser-safe library entry (`@glamour-labs/player`) for bundler consumers
     // (Studio). Excludes `exportInlineHTML` — see src/node.ts / src/index.ts.
     entry: ['src/index.ts'],
     format: ['esm'],
@@ -22,7 +22,7 @@ export default defineConfig([
     platform: 'browser',
   },
   {
-    // Node-only entry (`@glam/player/node`) for Node/bundler consumers that
+    // Node-only entry (`@glamour-labs/player/node`) for Node/bundler consumers that
     // need `exportInlineHTML` (e.g. the CLI). Statically imports `node:fs`/
     // `node:path`/`node:url`, so it must stay out of the browser entry above.
     entry: ['src/node.ts'],
@@ -35,7 +35,7 @@ export default defineConfig([
   },
   {
     // Standalone browser bundle: a single <script> exposing `window.Glam`.
-    // Force-bundles all deps (xstate, @glam/core) — nothing external.
+    // Force-bundles all deps (xstate, @glamour-labs/core) — nothing external.
     entry: { 'glam-player': 'src/umd-entry.ts' },
     format: ['iife'],
     globalName: 'Glam',

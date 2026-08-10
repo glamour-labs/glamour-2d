@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { buildDoc } from './src/build.mjs';
 import { LETTERS } from './src/glyphs.mjs';
 import { THEME_IDS } from './src/themes.mjs';
-import { validate } from '@glam/core';
+import { validate } from '@glamour-labs/core';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(HERE, 'glam');

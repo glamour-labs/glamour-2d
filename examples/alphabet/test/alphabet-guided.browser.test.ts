@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'vitest';
-// Import the SOURCE, not the package: `@glam/player` resolves to a gitignored
+// Import the SOURCE, not the package: `@glamour-labs/player` resolves to a gitignored
 // dist build, so a run without a preceding `pnpm build` would silently test
 // stale code. Every other player test in this project does the same.
 import { createHarness } from '../../../packages/player/src/harness.js';
-import type { GlamDoc } from '@glam/core';
+import type { GlamDoc } from '@glamour-labs/core';
 // @ts-expect-error — the generator is plain ESM JS on purpose
 import { buildDoc } from '../src/build.mjs';
 // @ts-expect-error — see above

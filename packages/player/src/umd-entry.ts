@@ -1,7 +1,7 @@
 // The browser/UMD build entry (`glam-player.umd.js`, global `window.Glam`).
 // Deliberately excludes `exportInlineHTML` (src/export.ts), which statically
 // imports `node:fs` and cannot run inside a plain <script> page.
-import { buildScene } from '@glam/core';
+import { buildScene } from '@glamour-labs/core';
 import { renderGlamour } from './player.js';
 import { toXState } from './machine.js';
 import { GlamCanvasElement, defineGlamCanvas } from './webcomponent.js';

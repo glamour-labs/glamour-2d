@@ -1,5 +1,5 @@
 {
-  "name": "@glam/skill-cast-glamour",
+  "name": "@glamour-labs/skill-cast-glamour",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,11 +8,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@glam/core": "*"
+    "@glamour-labs/core": "*"
   },
   "devDependencies": {
     "typescript": "^5.6.3",
     "vitest": "^2.1.4",
-    "@glam/player": "*"
+    "@glamour-labs/player": "*"
   }
 }

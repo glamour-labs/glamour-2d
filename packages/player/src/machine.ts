@@ -1,5 +1,5 @@
 import { createMachine, type AnyStateMachine } from 'xstate';
-import { classifyOnKey, evalCondition, type GlamDoc } from '@glam/core';
+import { classifyOnKey, evalCondition, type GlamDoc } from '@glamour-labs/core';
 
 /** v1 wired pointer events — the only ones the player actually fires. */
 const WIRED_POINTER_EVENTS = new Set(['click', 'hover', 'leave']);

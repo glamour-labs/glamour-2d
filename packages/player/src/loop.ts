@@ -1,10 +1,10 @@
-import { loopValueAt, Wander, konvaMethodFor, clampPropValue, type GlamDoc } from '@glam/core';
+import { loopValueAt, Wander, konvaMethodFor, clampPropValue, type GlamDoc } from '@glamour-labs/core';
 
 // Node handles are structurally typed — the scene generates its accessors, so a
-// concrete interface here would just duplicate @glam/core's.
+// concrete interface here would just duplicate @glamour-labs/core's.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type NodeLike = any;
-/** Only `draw()` is needed; @glam/core's LayerShim satisfies it. */
+/** Only `draw()` is needed; @glamour-labs/core's LayerShim satisfies it. */
 interface Drawable {
   draw(): void;
 }

@@ -6,7 +6,7 @@ import {
   clampPropValue,
   type GlamDoc,
   type TraceResult,
-} from '@glam/core';
+} from '@glamour-labs/core';
 import { toXState } from './machine.js';
 import { RunLoop, hasMotion } from './loop.js';
 

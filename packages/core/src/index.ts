@@ -40,6 +40,6 @@ export {
 } from './scene.js';
 export type { SceneHandle, GlamNodeHandle, NodeHandle, BuildSceneOpts } from './scene.js';
 // NOTE: `renderToPNG` is no longer exported from core. The WebGL backend has no
-// in-process rasterizer, so headless render lives in `@glam/player/node`, which
+// in-process rasterizer, so headless render lives in `@glamour-labs/player/node`, which
 // drives a real browser. See docs/V2-RENDERER.md.
 export { loopValueAt, Wander } from './motion.js';

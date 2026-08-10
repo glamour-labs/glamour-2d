@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import type { GlamDoc } from '@glam/core';
+import type { GlamDoc } from '@glamour-labs/core';
 import { callTool, type ToolName } from './tools.js';
 
-// DEFER (v2): these zod shapes restate @glam/core's schema.ts by hand; core
+// DEFER (v2): these zod shapes restate @glamour-labs/core's schema.ts by hand; core
 // remains the source of truth for the GlamDoc shape — see FIX-LIST.md.
 const glamNodeShape = {
   id: z.string(),
@@ -67,7 +67,7 @@ const descriptions: Record<ToolName, string> = {
 };
 
 /**
- * Builds an `@glam/mcp` server. Session state (the in-progress `GlamDoc`) is
+ * Builds an `@glamour-labs/mcp` server. Session state (the in-progress `GlamDoc`) is
  * held in a closure so each tool call sees the result of the previous one —
  * mirroring a single authoring session.
  */

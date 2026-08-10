@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { renderToPNG } from '../src/render-node.js';
-import type { GlamDoc } from '@glam/core';
+import type { GlamDoc } from '@glamour-labs/core';
 
 const validDoc: GlamDoc = {
   schema: 'glamour/v0',

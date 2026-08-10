@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validate, traceMatch, type GlamDoc } from '@glam/core';
+import { validate, traceMatch, type GlamDoc } from '@glamour-labs/core';
 // @ts-expect-error — the generator is plain ESM JS, deliberately un-TypeScripted
 // so it stays runnable with a bare `node build.mjs` from a fresh checkout.
 import { buildDoc } from '../src/build.mjs';

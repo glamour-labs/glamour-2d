@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { GlamDoc } from '@glam/core';
+import type { GlamDoc } from '@glamour-labs/core';
 
 // Node-only helper (reads the built UMD bundle off disk) — deliberately kept
 // out of the browser/UMD bundle graph (see umd-entry.ts) since `node:fs`
@@ -43,13 +43,13 @@ function escapeForInlineScript(raw: string): string {
 /**
  * Bundles the built UMD player + the doc into a single self-contained HTML
  * string — the "standalone shareable piece" (openable offline, no server).
- * Requires `@glam/player` to have been built first (`npm run build`).
+ * Requires `@glamour-labs/player` to have been built first (`npm run build`).
  */
 export function exportInlineHTML(doc: GlamDoc): string {
   if (!existsSync(UMD_PATH)) {
     throw new Error(
-      `exportInlineHTML: dist/glam-player.umd.js not found — build @glam/player first ` +
-        `(npm run build --workspace=@glam/player).`,
+      `exportInlineHTML: dist/glam-player.umd.js not found — build @glamour-labs/player first ` +
+        `(npm run build --workspace=@glamour-labs/player).`,
     );
   }
   const umdSource = escapeForInlineScript(readFileSync(UMD_PATH, 'utf8'));

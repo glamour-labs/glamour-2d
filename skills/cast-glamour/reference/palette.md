@@ -6,7 +6,7 @@ Nothing here reads or mutates the doc directly — palette functions are pure fa
 ops; `applyOps` does the (also pure, immutable) application.
 
 ```ts
-import { applyOps, palette, listPrimitives } from '@glam/core';
+import { applyOps, palette, listPrimitives } from '@glamour-labs/core';
 ```
 
 Call `listPrimitives()` at any time to get this table live from the source (name +
@@ -100,7 +100,7 @@ own initial state matters more.
 `applyOps` takes a flat `Op[]`, so concatenate:
 
 ```ts
-import { applyOps, palette } from '@glam/core';
+import { applyOps, palette } from '@glamour-labs/core';
 
 const doc2 = applyOps(doc, [
   ...palette.progressBar('bar', 'progress'),

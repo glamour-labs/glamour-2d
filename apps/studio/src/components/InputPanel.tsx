@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { GlamDoc } from '@glam/core';
-import type { GlamPlayer } from '@glam/player';
+import type { GlamDoc } from '@glamour-labs/core';
+import type { GlamPlayer } from '@glamour-labs/player';
 
 interface InputPanelProps {
   inputs: GlamDoc['inputs'];
