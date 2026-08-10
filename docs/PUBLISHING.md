@@ -11,8 +11,27 @@ For *why* it's published at all, and the naming trap that preceded it, see
 1. **Be a member of the `glamour-labs` npm org.** The scope only works for org members —
    `@glamour-labs/*` is the org's namespace.
 2. **`npm login`.**
-3. **Create a granular access token with "bypass 2FA" enabled**, and use it instead of an
-   interactive one-time code. This is not laziness — see the OTP race below.
+3. **Satisfy npm's publish-authentication requirement.** This is mandatory, not a hardening step:
+   the registry rejects the very first `PUT` without it.
+
+   ```
+   npm error code E403
+   npm error 403 Forbidden - PUT https://registry.npmjs.org/@glamour-labs%2fcore -
+   Two-factor authentication or granular access token with bypass 2fa enabled is
+   required to publish packages.
+   ```
+
+   **`npm profile get` reporting `two-factor auth: disabled` is the cause, not a bypass.** That
+   reads like "no 2FA to worry about" and means the opposite — with 2FA off and no token, you cannot
+   publish at all. Being logged in and an org owner is not sufficient.
+
+   Two ways out:
+
+   - **Granular access token with "bypass 2FA" enabled** (preferred) — created at
+     npmjs.com → Access Tokens → Granular. Publishes non-interactively and sidesteps the OTP race
+     below. Scope it to the `@glamour-labs` packages with read+write.
+   - **Enable 2FA on the account**, then pass `--otp=<code>` per publish. Correct, but re-introduces
+     the OTP race across five sequential publishes.
 
 ## Release
 
