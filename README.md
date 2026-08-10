@@ -229,6 +229,7 @@ system, stroke order cross-checked against Zaner-Bloser / HWT / D'Nealian / UK s
 the generator.
 
 Docs: [Roadmap / what's next](docs/ROADMAP.md) · [Using Glamour](docs/USING-GLAMOUR.md) · [Decisions](docs/DECISIONS.md) ·
+[Publishing](docs/PUBLISHING.md) ·
 plans under `docs/superpowers/plans/` · proof sketches in `sketches/` (progress-ring, toggle, crab-game,
 orb, **trace-letter**).
 
