@@ -40,9 +40,20 @@ ink modes, and picking the wrong one gets you silence:
 A guided doc draws no free ink, so `onStroke` never fires for it. A tracing UI that wants live
 progress — a sound every 10%, a sparkle at completion — needs `onGuided`.
 
-**Next.js App Router:** this package ships a `'use client'` directive, so importing it from a server
-component works as-is. It has to — the component owns a live WebGL2 context. Give the wrapper
-explicit dimensions matching `canvas.w`/`canvas.h`, since the canvas only appears after hydration.
+**Next.js:** this package ships a `'use client'` directive — it has to, since the component owns a
+live WebGL2 context. Give the wrapper explicit dimensions matching `canvas.w`/`canvas.h`, since the
+canvas only appears after hydration. The canvas itself is sized in CSS pixels from `doc.canvas`, so
+scale it with CSS (`width`/`height` on the canvas) if you need it to fill a container — pointer
+coordinates are mapped through the rendered rect, so a CSS-scaled canvas still tracks correctly.
+
+Note that `'use client'` marks a **bundler boundary; it does not stop the server from evaluating
+this module**. The package is safe to import server-side as of 0.1.3 (earlier versions threw
+`ReferenceError: HTMLElement is not defined` during SSR), but nothing renders until hydration
+either way. If you want to skip the server pass entirely, import it dynamically:
+
+```tsx
+const Glamour = dynamic(() => import('@glamour-labs/react').then((m) => m.Glamour), { ssr: false });
+```
 
 React 18 and 19 are both supported (`peerDependencies: react >=18`).
 

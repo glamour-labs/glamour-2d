@@ -31,7 +31,9 @@ export default defineWorkspace([
         // Pure logic — no canvas needed.
         'packages/core/test/{expr,motion,onkey,ops,palette,schema,starterDoc,trace,validate}.test.ts',
         // Node-only helpers + the headless render path (drives its own browser).
-        'packages/player/test/{diagnose,export,machine,render-node}.test.ts',
+        // `ssr-import` MUST stay here: it asserts the entry point loads with no
+        // DOM at all, which is only true in the node project.
+        'packages/player/test/{diagnose,export,machine,render-node,ssr-import}.test.ts',
         'packages/cli/test/**/*.test.ts',
         'packages/mcp/test/**/*.test.ts',
         'skills/*/test/**/*.test.ts',
