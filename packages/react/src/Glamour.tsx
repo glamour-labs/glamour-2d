@@ -35,9 +35,18 @@ export interface GlamourHandle {
    * Defaults to the stroke the user is about to draw, so a multi-stroke letter
    * calls it once per stroke. No-ops (resolved) on a doc with no `guided` block.
    */
-  demoGuided(opts?: { index?: number; durationMs?: number; holdMs?: number }): Promise<void>;
+  demoGuided(opts?: {
+    index?: number;
+    durationMs?: number;
+    holdMs?: number;
+    /** Leave the finished stroke on the canvas, so a letter can be demonstrated
+     *  stroke by stroke as one accumulating letter. Pair with `resetGuided`. */
+    keepInk?: boolean;
+  }): Promise<void>;
   /** Stops a demo in flight and hands control back to the pointer. */
   cancelGuidedDemo(): void;
+  /** Clears every stroke's ink and returns to the first stroke, at rest. */
+  resetGuided(): void;
 }
 
 export interface GlamourProps {
@@ -109,6 +118,7 @@ export const Glamour = forwardRef<GlamourHandle, GlamourProps>(function Glamour(
       // should proceed to "now you try", not hang or throw.
       demoGuided: (opts) => playerRef.current?.demoGuided(opts) ?? Promise.resolve(),
       cancelGuidedDemo: () => playerRef.current?.cancelGuidedDemo(),
+      resetGuided: () => playerRef.current?.resetGuided(),
     }),
     [],
   );

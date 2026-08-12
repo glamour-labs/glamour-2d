@@ -112,10 +112,34 @@ export interface GlamPlayer {
    * without finishing) if cancelled or the player is destroyed, so an awaiting host
    * never hangs. Pointer input is ignored while a demo plays; call
    * `cancelGuidedDemo` to hand control back sooner.
+   *
+   * `keepInk` leaves the finished stroke ON the canvas instead of clearing it, and
+   * makes this call not clear whatever a previous keep-ink run left. That is what
+   * lets a multi-stroke letter be demonstrated as one letter — stroke after stroke,
+   * each staying — rather than as a series of strokes that each vanish. It is
+   * unreachable from outside the engine: `set` takes a number or a string, so a
+   * host cannot write a polyline's points, and every later demo would erase the one
+   * before it. A host using it owns the cleanup, via `resetGuided`.
+   *
+   * With `keepInk` the terminal event carries `progress: 1` rather than `0`, since
+   * progress reports what is actually on the canvas.
    */
-  demoGuided(opts?: { index?: number; durationMs?: number; holdMs?: number }): Promise<void>;
+  demoGuided(opts?: {
+    index?: number;
+    durationMs?: number;
+    holdMs?: number;
+    keepInk?: boolean;
+  }): Promise<void>;
   /** Stops a demo in flight, clears its ink, and resolves its promise. */
   cancelGuidedDemo(): void;
+  /**
+   * Returns the guided document to its resting state: every stroke's ink cleared,
+   * the cursor back on the first stroke, its handle and arrow seeded at the start.
+   *
+   * The counterpart to `keepInk` — a host that accumulated a demonstration needs
+   * one call to wipe it before handing over — and equally what "try again" wants.
+   */
+  resetGuided(): void;
   destroy(): void;
 }
 
@@ -416,6 +440,7 @@ export function renderGlamour(
     index: number;
     durationMs: number;
     holdMs: number;
+    keepInk: boolean;
     t0: number | null;
     resolve: () => void;
     raf: number | null;
@@ -464,17 +489,32 @@ export function renderGlamour(
     }
 
     const index = demo.index;
-    endDemo(true);
-    // progress 0, because the ink was just cleared — see GlamGuidedEvent.demo.
-    fireIsolated<GlamGuidedEvent>(guidedListeners, { index, progress: 0, done: true, demo: true });
+    const kept = demo.keepInk;
+    endDemo(!kept);
+    // Progress reports what is actually on the canvas: 0 when the ink was cleared
+    // for the user to draw, 1 when `keepInk` left the finished stroke standing.
+    fireIsolated<GlamGuidedEvent>(guidedListeners, {
+      index,
+      progress: kept ? 1 : 0,
+      done: true,
+      demo: true,
+    });
   }
 
   function demoGuided(opts?: {
     index?: number;
     durationMs?: number;
     holdMs?: number;
+    keepInk?: boolean;
   }): Promise<void> {
-    cancelGuidedDemo();
+    // Ending the previous demo clears ITS OWN stroke, which is right when the canvas
+    // is being handed back — but wrong when that demo is a keep-ink run being
+    // interrupted, since its whole purpose was to leave the stroke standing. So a
+    // keep-ink call ends the outgoing one without clearing. (A demo that already
+    // finished is not affected either way: `endDemo` no-ops once it is gone, so
+    // strokes left by completed keep-ink runs persist until `resetGuided`.)
+    const keepInk = opts?.keepInk === true;
+    endDemo(!keepInk);
     if (!guidedInfos) return Promise.resolve();
     const index = opts?.index ?? guidedIdx;
     if (index < 0 || index >= guidedInfos.length) return Promise.resolve();
@@ -488,6 +528,7 @@ export function renderGlamour(
         index,
         durationMs: Math.max(1, opts?.durationMs ?? 1400),
         holdMs: Math.max(0, opts?.holdMs ?? 350),
+        keepInk,
         t0: null,
         resolve,
         raf: null,
@@ -499,6 +540,18 @@ export function renderGlamour(
 
   function cancelGuidedDemo(): void {
     endDemo(true);
+  }
+
+  function resetGuided(): void {
+    endDemo(false); // stop any demo without a clear; the loop below clears everything
+    if (!guidedInfos) return;
+    guidedIdx = 0;
+    guidedProgress = 0;
+    guidedDragging = false;
+    for (const info of guidedInfos) gPaint(info, 0);
+    // Seed the first stroke last so its handle and arrow end up at the start,
+    // which is the resting frame a fresh document has.
+    gPaint(guidedInfos[0], 0);
   }
 
   function guidedHandle(type: 'down' | 'move' | 'up', x: number, y: number): void {
@@ -643,6 +696,7 @@ export function renderGlamour(
     onGuided,
     demoGuided,
     cancelGuidedDemo,
+    resetGuided,
     destroy,
   };
   // Test-only hooks (not part of the public GlamPlayer contract):

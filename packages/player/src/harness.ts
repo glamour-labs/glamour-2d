@@ -63,7 +63,14 @@ export interface Harness {
    * even exist). Steps in `stepMs` slices past the write plus the hold, so the
    * demo's own `{done: true, demo: true}` has fired by the time this returns.
    */
-  demo(opts?: { index?: number; durationMs?: number; holdMs?: number; stepMs?: number }): Harness;
+  demo(opts?: {
+    index?: number;
+    durationMs?: number;
+    holdMs?: number;
+    stepMs?: number;
+    /** leave the stroke drawn, so successive demos accumulate. */
+    keepInk?: boolean;
+  }): Harness;
 
   // ---- inspect (any instant) ----
   /** read a node's live props (or null if no such node). */
@@ -194,7 +201,7 @@ export function createHarness(doc: GlamDoc, opts: HarnessOpts = {}): Harness {
       const durationMs = opts.durationMs ?? 1400;
       const holdMs = opts.holdMs ?? 350;
       const stepMs = opts.stepMs ?? 100;
-      void player.demoGuided({ index: opts.index, durationMs, holdMs });
+      void player.demoGuided({ index: opts.index, durationMs, holdMs, keepInk: opts.keepInk });
       // The demo has no frames of its own here — `requestAnimationFrame` may not
       // even exist — so every step is injected. One extra step past the total
       // guarantees the terminal frame (clear + `done`) is reached rather than the

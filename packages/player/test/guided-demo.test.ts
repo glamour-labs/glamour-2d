@@ -135,6 +135,95 @@ test('a demo of a later stroke leaves earlier ink alone', () => {
   expect(h.node('ink2')!.points).toEqual([]);
 });
 
+test('keepInk leaves the finished stroke standing', () => {
+  h = createHarness(oneStroke);
+  h.demo({ keepInk: true });
+
+  expect(h.node('ink')!.points!.length).toBeGreaterThan(4); // still drawn
+  const last = h.guided.filter((e) => e.demo).at(-1)!;
+  expect(last.done).toBe(true);
+  expect(last.progress).toBe(1); // reports what is on the canvas, not 0
+});
+
+test('keepInk demos ACCUMULATE across strokes — the letter builds up', () => {
+  h = createHarness(twoStroke);
+
+  h.demo({ index: 0, keepInk: true });
+  const afterFirst = h.node('ink1')!.points!.length;
+  expect(afterFirst).toBeGreaterThan(4);
+
+  h.demo({ index: 1, keepInk: true });
+  // The point of the flag: stroke 1 is untouched by stroke 2's demo. Without it,
+  // starting the second demo clears the first (cancel-clears-outgoing).
+  expect(h.node('ink1')!.points!.length).toBe(afterFirst);
+  expect(h.node('ink2')!.points!.length).toBeGreaterThan(4);
+});
+
+test('a plain demo clears only its OWN stroke; kept ink is the host to clean up', () => {
+  h = createHarness(twoStroke);
+  h.demo({ index: 0, keepInk: true }); // leave stroke 1 standing
+  const kept = h.node('ink1')!.points!.length;
+  expect(kept).toBeGreaterThan(4);
+
+  h.demo({ index: 1 }); // a plain demo: hands ITS stroke back blank
+  expect(h.node('ink2')!.points).toEqual([]);
+  // ...and does NOT tidy up after the earlier keep-ink run. Ending a demo clears
+  // the demo's own stroke, and that one already finished — so this is `resetGuided`'s
+  // job, which is exactly why it exists.
+  expect(h.node('ink1')!.points!.length).toBe(kept);
+});
+
+test('interrupting a keep-ink demo mid-write does not wipe what it had drawn', () => {
+  h = createHarness(twoStroke);
+  // Frames have to be injected by hand here: the harness's `demo()` always runs to
+  // completion, and this test is specifically about a demo caught IN FLIGHT.
+  const step = (h.player as unknown as { __demoFrame(t: number): void }).__demoFrame;
+  void h.player.demoGuided({ index: 0, durationMs: 1000, holdMs: 0, keepInk: true });
+  step(0);
+  step(500); // half written
+  const partial = h.node('ink1')!.points!.length;
+  expect(partial).toBeGreaterThan(0);
+
+  h.player.demoGuided({ index: 1, keepInk: true }); // interrupt with another keep-ink run
+  // The partial stroke survives: a keep-ink interruption must not clear, or a
+  // stroke-by-stroke demonstration would lose whatever it was mid-way through.
+  expect(h.node('ink1')!.points!.length).toBe(partial);
+});
+
+test('resetGuided wipes an accumulated demonstration and returns to stroke 1', () => {
+  h = createHarness(twoStroke);
+  h.demo({ index: 0, keepInk: true });
+  h.demo({ index: 1, keepInk: true });
+  expect(h.node('ink1')!.points!.length).toBeGreaterThan(4);
+  expect(h.node('ink2')!.points!.length).toBeGreaterThan(4);
+
+  h.player.resetGuided();
+  expect(h.node('ink1')!.points).toEqual([]);
+  expect(h.node('ink2')!.points).toEqual([]);
+  expect(h.node('h1')!.x).toBeCloseTo(40, 0); // first stroke's handle, at its start
+  expect(h.node('h1')!.y).toBeCloseTo(80, 0);
+
+  // And the user can now draw stroke 1 — the cursor really went back.
+  h.clearLog();
+  h.stroke(dense([[40, 80], [180, 80]]));
+  const done = h.guided.filter((e) => !e.demo && e.done);
+  expect(done.length).toBe(1);
+  expect(done[0].index).toBe(0);
+});
+
+test('resetGuided after real progress lets the whole letter be redrawn', () => {
+  h = createHarness(twoStroke);
+  h.stroke(dense([[40, 80], [180, 80]])); // stroke 1 really drawn
+  h.player.resetGuided();
+  h.clearLog();
+
+  // Both strokes again, from the top.
+  h.stroke(dense([[40, 80], [180, 80]]));
+  h.stroke(dense([[40, 140], [180, 140]]));
+  const dones = h.guided.filter((e) => !e.demo && e.done).map((e) => e.index);
+  expect(dones).toEqual([0, 1]);
+});
+
 test('destroy resolves a demo in flight rather than leaving a host awaiting', async () => {
   const local = createHarness(oneStroke);
   const pending = local.player.demoGuided({ durationMs: 100_000, holdMs: 0 });
