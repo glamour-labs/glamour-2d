@@ -29,6 +29,15 @@ export interface GlamourHandle {
   play(): void;
   pause(): void;
   getState(): string;
+  /**
+   * Plays a guided stroke drawing itself, then clears it for the user — the
+   * "watch how, now you try" beat. Resolves when the stroke is ready to trace.
+   * Defaults to the stroke the user is about to draw, so a multi-stroke letter
+   * calls it once per stroke. No-ops (resolved) on a doc with no `guided` block.
+   */
+  demoGuided(opts?: { index?: number; durationMs?: number; holdMs?: number }): Promise<void>;
+  /** Stops a demo in flight and hands control back to the pointer. */
+  cancelGuidedDemo(): void;
 }
 
 export interface GlamourProps {
@@ -95,6 +104,11 @@ export const Glamour = forwardRef<GlamourHandle, GlamourProps>(function Glamour(
       play: () => playerRef.current?.play(),
       pause: () => playerRef.current?.pause(),
       getState: () => playerRef.current?.getState() ?? '',
+      // Resolves rather than rejects when there is no player yet (the canvas is
+      // client-only, so a host may call this before mount): an awaiting caller
+      // should proceed to "now you try", not hang or throw.
+      demoGuided: (opts) => playerRef.current?.demoGuided(opts) ?? Promise.resolve(),
+      cancelGuidedDemo: () => playerRef.current?.cancelGuidedDemo(),
     }),
     [],
   );
