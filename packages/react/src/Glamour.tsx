@@ -10,6 +10,7 @@ import {
   renderGlamour,
   type GlamPlayer,
   type GlamEmitEvent,
+  type GlamGuidedEvent,
   type GlamPointerEvent,
   type GlamStrokeEvent,
 } from '@glamour-labs/player';
@@ -39,12 +40,20 @@ export interface GlamourProps {
   onStroke?: (e: GlamStrokeEvent) => void;
   /** Raw pointer stream in canvas coordinates (Rung 2). */
   onPointer?: (e: GlamPointerEvent) => void;
+  /**
+   * Guided ink: fires continuously as the user drags along an authored path
+   * (`{index, progress, done}`). The player owns the drag mechanics; the host
+   * uses this for presentation and for its own notion of "stroke finished" —
+   * which is why a tracing host needs it and `onStroke` alone will not do
+   * (`onStroke` reports raw ink at pen-up, and a guided doc has none).
+   */
+  onGuided?: (e: GlamGuidedEvent) => void;
   className?: string;
   style?: CSSProperties;
 }
 
 export const Glamour = forwardRef<GlamourHandle, GlamourProps>(function Glamour(
-  { doc, onEmit, onStroke, onPointer, className, style },
+  { doc, onEmit, onStroke, onPointer, onGuided, className, style },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null);
@@ -53,8 +62,8 @@ export const Glamour = forwardRef<GlamourHandle, GlamourProps>(function Glamour(
   // Keep the latest callbacks in a ref so a parent re-render that passes new
   // callback identities does NOT tear down and re-mount the canvas (which would
   // reset all animation/state). The subscriptions read through this ref.
-  const cbs = useRef({ onEmit, onStroke, onPointer });
-  cbs.current = { onEmit, onStroke, onPointer };
+  const cbs = useRef({ onEmit, onStroke, onPointer, onGuided });
+  cbs.current = { onEmit, onStroke, onPointer, onGuided };
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -67,6 +76,7 @@ export const Glamour = forwardRef<GlamourHandle, GlamourProps>(function Glamour(
       player.on((e) => cbs.current.onEmit?.(e)),
       player.onStroke((e) => cbs.current.onStroke?.(e)),
       player.onPointer((e) => cbs.current.onPointer?.(e)),
+      player.onGuided((e) => cbs.current.onGuided?.(e)),
     ];
 
     return () => {
