@@ -78,6 +78,21 @@ export interface GlamPlayer {
    */
   set(nodeId: string, prop: string, value: number | string): void;
   /**
+   * Apply many props across many nodes, then repaint ONCE.
+   *
+   * `set` draws on every call, so a host changing several things at a moment —
+   * handing guides from one stroke to the next, firing a burst, moving a particle
+   * — pays a full canvas repaint per property. That is not a micro-optimisation:
+   * nine `set` calls in one frame produced enough jank to swallow the pointer
+   * events a drag depends on, and multi-stroke letters intermittently could not be
+   * completed at all. One repaint for the whole batch removes the class of problem
+   * rather than tuning around it.
+   *
+   * Entries are `[nodeId, prop, value]`. Unknown nodes and props are skipped, as
+   * with `set`.
+   */
+  setMany(updates: Array<[string, string, number | string]>): void;
+  /**
    * Rung 2: subscribes to the raw pointer stream (down/move/up) in canvas
    * coordinates. Returns an unsubscribe function.
    */
@@ -651,7 +666,8 @@ export function renderGlamour(
     return () => guidedListeners.delete(cb);
   }
 
-  function set(nodeId: string, prop: string, value: number | string): void {
+  /** Apply one prop without drawing. Shared by `set` and `setMany`. */
+  function applyProp(nodeId: string, prop: string, value: number | string): void {
     const target = scene.byId[nodeId];
     if (!target) return;
     const method = PROP_TO_METHOD[prop];
@@ -661,6 +677,16 @@ export function renderGlamour(
     if (!method || typeof acc[method] !== 'function') return;
     const v = typeof value === 'number' ? clampPropValue(prop, value) : value;
     acc[method](v);
+  }
+
+  function set(nodeId: string, prop: string, value: number | string): void {
+    applyProp(nodeId, prop, value);
+    scene.layer.draw();
+  }
+
+  function setMany(updates: Array<[string, string, number | string]>): void {
+    if (!updates.length) return;
+    for (const [nodeId, prop, value] of updates) applyProp(nodeId, prop, value);
     scene.layer.draw();
   }
 
@@ -691,6 +717,7 @@ export function renderGlamour(
     play,
     pause,
     set,
+    setMany,
     onPointer,
     onStroke,
     onGuided,

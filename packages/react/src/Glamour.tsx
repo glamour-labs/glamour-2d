@@ -26,6 +26,10 @@ export interface GlamourHandle {
   setInput(name: string, value: number | string): void;
   /** Imperatively set one node's prop (e.g. recolor a specific element). */
   set(nodeId: string, prop: string, value: number | string): void;
+  /** Apply many props across many nodes, repainting once. Use this instead of a
+   *  run of `set` calls: each `set` repaints, and a burst of them can jank hard
+   *  enough to swallow the pointer events an interaction depends on. */
+  setMany(updates: Array<[string, string, number | string]>): void;
   play(): void;
   pause(): void;
   getState(): string;
@@ -110,6 +114,7 @@ export const Glamour = forwardRef<GlamourHandle, GlamourProps>(function Glamour(
       send: (event) => playerRef.current?.send(event),
       setInput: (name, value) => playerRef.current?.setInput(name, value),
       set: (nodeId, prop, value) => playerRef.current?.set(nodeId, prop, value),
+      setMany: (updates) => playerRef.current?.setMany(updates),
       play: () => playerRef.current?.play(),
       pause: () => playerRef.current?.pause(),
       getState: () => playerRef.current?.getState() ?? '',

@@ -240,3 +240,38 @@ test('demoGuided on a doc with no guided block resolves without throwing', async
   h = createHarness(plain);
   await expect(h.player.demoGuided()).resolves.toBeUndefined();
 });
+
+test('setMany applies every prop, skipping unknown nodes and props', () => {
+  h = createHarness(twoStroke);
+  h.player.setMany([
+    ['h1', 'x', 111],
+    ['h1', 'y', 222],
+    ['h2', 'opacity', 0.5],
+    ['nope', 'x', 5], // unknown node: skipped, never thrown
+    ['h1', 'bogusProp', 1], // unknown prop: skipped, never thrown
+  ]);
+  expect(h.node('h1')!.x).toBe(111);
+  expect(h.node('h1')!.y).toBe(222);
+  expect(h.node('h2')!.opacity).toBe(0.5);
+});
+
+test('setMany leaves the same state as the equivalent run of set calls', () => {
+  // The repaint saving itself is structural — one draw after the loop rather than
+  // one per prop — and is not observable from the public surface, so this asserts
+  // the part that is: the two paths are interchangeable in effect.
+  h = createHarness(twoStroke);
+  h.player.setMany([
+    ['h1', 'x', 10],
+    ['h2', 'x', 20],
+  ]);
+  expect([h.node('h1')!.x, h.node('h2')!.x]).toEqual([10, 20]);
+
+  h.player.set('h1', 'x', 30);
+  h.player.set('h2', 'x', 40);
+  expect([h.node('h1')!.x, h.node('h2')!.x]).toEqual([30, 40]);
+});
+
+test('setMany with nothing to do is a no-op', () => {
+  h = createHarness(twoStroke);
+  expect(() => h.player.setMany([])).not.toThrow();
+});
