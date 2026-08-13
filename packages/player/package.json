@@ -1,6 +1,6 @@
 {
   "name": "@glamour-labs/player",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Browser runtime for glamour documents — renderGlamour, the <glam-canvas> web component, self-contained HTML export, and a headless drive-and-assert harness.",
   "keywords": ["glamour", "glam", "animation", "interactive", "webgl", "webgl2", "web-component", "canvas"],
   "license": "MIT",
