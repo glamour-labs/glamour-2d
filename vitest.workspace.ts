@@ -53,7 +53,7 @@ export default defineWorkspace([
       name: 'browser',
       include: [
         'packages/core/test/{scene,paint,context-loss}.test.ts',
-        'packages/player/test/{player,ink,harness,guided,guided-demo,webcomponent,loop}.test.ts',
+        'packages/player/test/{player,ink,harness,guided,guided-progress,webcomponent,loop}.test.ts',
         'packages/react/test/**/*.test.{ts,tsx}',
         'apps/studio/test/**/*.test.{ts,tsx}',
         // Drives every guided letter through the REAL player, so it needs GL.

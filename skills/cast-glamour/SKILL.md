@@ -318,6 +318,15 @@ only at the end); per-stroke advance. The host owns **presentation** (reveal the
 next stroke's guide, celebrate, reset) via `player.onGuided(cb)` →
 `{ index, progress, done }` and the `emit`. Same motion-vs-logic split as `ink`.
 
+A host can also drive progress itself with `player.setGuidedProgress(index, t)` —
+the same painting, `t` supplied instead of a finger. Run it off a clock and the
+stroke writes itself ("watch how, now you try"); off a scrubber and it becomes a
+timeline. Strokes accumulate, since each paints into its own `into`;
+`player.resetGuided()` wipes the lot and returns to the first stroke, and
+`player.setGuidedInputEnabled(false)` stops the canvas taking drags while the
+host is driving. What the motion *means* — pacing, holds, what stays on screen —
+is the host's, deliberately: it is the part that differs per product.
+
 Difference from §7 `ink`: `ink` is *free-draw* (+ optional `traceMatch` scoring);
 `guided` is *snapped* drag-along-a-fixed-path. A doc uses one or the other.
 

@@ -56,21 +56,11 @@ export interface Harness {
   /** advance continuous motion (`loops`/`wander`) by `ms` of virtual time. */
   tick(ms: number): Harness;
   /**
-   * Start a guided demo and drive it to completion on virtual time.
-   *
-   * Separate from `tick` because a demo runs on its own frame driver, not the
-   * `loops`/`wander` run loop (a tracing doc has neither, so that loop does not
-   * even exist). Steps in `stepMs` slices past the write plus the hold, so the
-   * demo's own `{done: true, demo: true}` has fired by the time this returns.
+   * Draw a guided stroke by stepping `setGuidedProgress` from 0 to 1 — what a host
+   * demonstrating a stroke does, minus the clock. Leaves the stroke fully inked,
+   * since that is what the last step painted; `player.resetGuided()` clears it.
    */
-  demo(opts?: {
-    index?: number;
-    durationMs?: number;
-    holdMs?: number;
-    stepMs?: number;
-    /** leave the stroke drawn, so successive demos accumulate. */
-    keepInk?: boolean;
-  }): Harness;
+  writeGuided(index?: number, steps?: number): Harness;
 
   // ---- inspect (any instant) ----
   /** read a node's live props (or null if no such node). */
@@ -106,7 +96,6 @@ interface PlayerHooks {
   __pointer(type: 'down' | 'move' | 'up', x: number, y: number): void;
   __byId: Record<string, Konvaish>;
   __tick(time: number): void;
-  __demoFrame(time: number): void;
 }
 interface Konvaish {
   x(): number;
@@ -137,10 +126,6 @@ export function createHarness(doc: GlamDoc, opts: HarnessOpts = {}): Harness {
   let lastY = 0;
   let clock = 0;
   let clockStarted = false;
-  // The demo's clock is separate from the run-loop's: it must keep rising across
-  // successive `demo()` calls, since each new demo takes its first frame's
-  // timestamp as its own zero.
-  let demoClock = 0;
 
   const h: Harness = {
     player,
@@ -197,22 +182,8 @@ export function createHarness(doc: GlamDoc, opts: HarnessOpts = {}): Harness {
       hooks.__tick(clock);
       return h;
     },
-    demo(opts = {}) {
-      const durationMs = opts.durationMs ?? 1400;
-      const holdMs = opts.holdMs ?? 350;
-      const stepMs = opts.stepMs ?? 100;
-      void player.demoGuided({ index: opts.index, durationMs, holdMs, keepInk: opts.keepInk });
-      // The demo has no frames of its own here — `requestAnimationFrame` may not
-      // even exist — so every step is injected. One extra step past the total
-      // guarantees the terminal frame (clear + `done`) is reached rather than the
-      // sequence stopping one frame short of it.
-      let t = 0;
-      const end = durationMs + holdMs + stepMs;
-      while (t <= end) {
-        demoClock += stepMs;
-        hooks.__demoFrame(demoClock);
-        t += stepMs;
-      }
+    writeGuided(index = 0, steps = 12) {
+      for (let k = 0; k <= steps; k++) player.setGuidedProgress(index, k / steps);
       return h;
     },
 

@@ -34,21 +34,15 @@ export interface GlamourHandle {
   pause(): void;
   getState(): string;
   /**
-   * Plays a guided stroke drawing itself, then clears it for the user — the
-   * "watch how, now you try" beat. Resolves when the stroke is ready to trace.
-   * Defaults to the stroke the user is about to draw, so a multi-stroke letter
-   * calls it once per stroke. No-ops (resolved) on a doc with no `guided` block.
+   * Puts guided stroke `index` at progress `t` (0..1) — the painting half of the
+   * drag, with the host supplying `t`. Drive it from a clock and the stroke writes
+   * itself; the pacing, the hold and whether earlier strokes stay are the host's.
+   * No-op mid-drag, out of range, or on a doc with no `guided` block.
    */
-  demoGuided(opts?: {
-    index?: number;
-    durationMs?: number;
-    holdMs?: number;
-    /** Leave the finished stroke on the canvas, so a letter can be demonstrated
-     *  stroke by stroke as one accumulating letter. Pair with `resetGuided`. */
-    keepInk?: boolean;
-  }): Promise<void>;
-  /** Stops a demo in flight and hands control back to the pointer. */
-  cancelGuidedDemo(): void;
+  setGuidedProgress(index: number, t: number): void;
+  /** Accept or ignore pointer input on the guided path — turn it off while
+   *  driving progress yourself, on again to hand over. */
+  setGuidedInputEnabled(enabled: boolean): void;
   /** Clears every stroke's ink and returns to the first stroke, at rest. */
   resetGuided(): void;
 }
@@ -118,11 +112,8 @@ export const Glamour = forwardRef<GlamourHandle, GlamourProps>(function Glamour(
       play: () => playerRef.current?.play(),
       pause: () => playerRef.current?.pause(),
       getState: () => playerRef.current?.getState() ?? '',
-      // Resolves rather than rejects when there is no player yet (the canvas is
-      // client-only, so a host may call this before mount): an awaiting caller
-      // should proceed to "now you try", not hang or throw.
-      demoGuided: (opts) => playerRef.current?.demoGuided(opts) ?? Promise.resolve(),
-      cancelGuidedDemo: () => playerRef.current?.cancelGuidedDemo(),
+      setGuidedProgress: (index, t) => playerRef.current?.setGuidedProgress(index, t),
+      setGuidedInputEnabled: (on) => playerRef.current?.setGuidedInputEnabled(on),
       resetGuided: () => playerRef.current?.resetGuided(),
     }),
     [],

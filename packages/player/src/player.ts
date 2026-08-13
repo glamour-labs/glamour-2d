@@ -44,17 +44,6 @@ export interface GlamGuidedEvent {
   progress: number;
   /** true when this stroke just completed (progress reached the end). */
   done: boolean;
-  /**
-   * True when this progress came from `demoGuided` — the stroke drawing ITSELF to
-   * show how, not the user drawing it.
-   *
-   * A host MUST branch on this. The demo ends with `{progress: 0, done: true,
-   * demo: true}` because the ink is cleared for the user to write it themselves;
-   * treating that `done` as the user's would skip the stroke they never drew, and
-   * feeding demo progress to per-stroke feedback would play the whole reward
-   * sequence at nobody.
-   */
-  demo?: boolean;
 }
 
 export interface GlamPlayer {
@@ -109,50 +98,47 @@ export interface GlamPlayer {
    */
   onGuided(cb: (e: GlamGuidedEvent) => void): () => void;
   /**
-   * Guided ink: plays a stroke drawing ITSELF, then clears it so the user draws
-   * it — the "watch how, now you try" beat every tracing product opens with.
+   * Guided ink: put stroke `index` at progress `t` (0..1) — ink trimmed to `t`,
+   * handle and arrow carried to that point. The same painting the drag does, with
+   * the host supplying `t` instead of a finger.
    *
-   * This belongs in the engine rather than each host because it is the same
-   * mechanics as the drag (trim the ink along the authored path, carry the handle
-   * and arrow with the tip) on a clock instead of a finger. A host cannot build it
-   * from the public surface at all: there is no way to advance guided progress
-   * without a real pointer, and `set` takes a number or a string, so a stroke's
-   * points are not reachable.
+   * This is the one piece of the "watch how, now you try" beat a host genuinely
+   * cannot build for itself: progress along a path is a private local here, and
+   * `set` takes a number or a string, so a stroke's points are not reachable from
+   * outside. Everything ELSE such a demonstration needs — the clock, how long a
+   * stroke should take, whether to hold the finished shape, whether earlier
+   * strokes stay on the canvas — is presentation, and belongs to the host that
+   * knows what it is teaching. Drive this from `requestAnimationFrame` and the
+   * stroke writes itself; drive it from a scrubber and it becomes a timeline.
    *
-   * Defaults to the stroke the user is about to draw, so in a multi-stroke letter
-   * the host calls it once per stroke as each one comes up.
+   * Ink accumulates for free: every stroke paints into its own `into` node, so
+   * leaving stroke 0 at 1 while painting stroke 1 builds up a whole letter. Wipe
+   * the lot with `resetGuided`.
    *
-   * Resolves when the ink has been cleared and the stroke is ready to be traced —
-   * which is the moment a host wants for "now you try". Also resolves (early, and
-   * without finishing) if cancelled or the player is destroyed, so an awaiting host
-   * never hangs. Pointer input is ignored while a demo plays; call
-   * `cancelGuidedDemo` to hand control back sooner.
+   * Fires no `onGuided` event — the host already knows, it asked. Out-of-range
+   * indices are a no-op, and so is a call while the user is mid-drag: a stroke
+   * under a finger is not the host's to move.
    *
-   * `keepInk` leaves the finished stroke ON the canvas instead of clearing it, and
-   * makes this call not clear whatever a previous keep-ink run left. That is what
-   * lets a multi-stroke letter be demonstrated as one letter — stroke after stroke,
-   * each staying — rather than as a series of strokes that each vanish. It is
-   * unreachable from outside the engine: `set` takes a number or a string, so a
-   * host cannot write a polyline's points, and every later demo would erase the one
-   * before it. A host using it owns the cleanup, via `resetGuided`.
-   *
-   * With `keepInk` the terminal event carries `progress: 1` rather than `0`, since
-   * progress reports what is actually on the canvas.
+   * Does NOT advance the guided cursor. The stroke the user is expected to draw
+   * is unchanged by having been shown.
    */
-  demoGuided(opts?: {
-    index?: number;
-    durationMs?: number;
-    holdMs?: number;
-    keepInk?: boolean;
-  }): Promise<void>;
-  /** Stops a demo in flight, clears its ink, and resolves its promise. */
-  cancelGuidedDemo(): void;
+  setGuidedProgress(index: number, t: number): void;
+  /**
+   * Accept or ignore pointer input on the guided path.
+   *
+   * A host that is driving progress itself — demonstrating, replaying, scrubbing —
+   * needs the canvas to stop taking drags for that stretch, and cannot do it from
+   * outside because the player owns the pointer handlers. Disabling also drops any
+   * drag in flight, so a finger already down does not resume mid-stroke when input
+   * comes back.
+   */
+  setGuidedInputEnabled(enabled: boolean): void;
   /**
    * Returns the guided document to its resting state: every stroke's ink cleared,
    * the cursor back on the first stroke, its handle and arrow seeded at the start.
    *
-   * The counterpart to `keepInk` — a host that accumulated a demonstration needs
-   * one call to wipe it before handing over — and equally what "try again" wants.
+   * One call to wipe an accumulated demonstration before handing over — and
+   * equally what "try again" wants.
    */
   resetGuided(): void;
   destroy(): void;
@@ -440,125 +426,30 @@ export function renderGlamour(
     guidedDragging = false;
     if (!wasLast) gPaint(guidedInfos[guidedIdx], 0); // seed next stroke's handle/arrow at its start
   }
-  // ---- guided demo: the stroke draws itself -------------------------------
+  // ---- host-driven guided progress ----------------------------------------
   //
-  // Deliberately its own small rAF driver rather than a hook into RunLoop: that
-  // loop only exists when the doc has `loops`/`wander` (`hasMotion`), and a
-  // tracing document has neither — so wiring the demo there would mean
-  // constructing a run loop for every guided doc purely to borrow its clock.
-  //
-  // `__demoFrame` is exposed on the player as a non-enumerable test hook (beside
-  // `__pointer`) so the harness can step a demo deterministically instead of
-  // waiting on real frames.
-  interface DemoState {
-    info: GInfo;
-    index: number;
-    durationMs: number;
-    holdMs: number;
-    keepInk: boolean;
-    t0: number | null;
-    resolve: () => void;
-    raf: number | null;
-  }
-  let demo: DemoState | null = null;
+  // The host paints a stroke at an arbitrary `t`. What that `t` means — a demo
+  // writing itself, a replay, a scrubber — is the host's business; all this owes
+  // it is the same painting the drag does, and the guarantee that it will not
+  // fight a finger.
+  let guidedInputEnabled = true;
 
-  const scheduleDemo = (): void => {
-    if (!demo || typeof requestAnimationFrame !== 'function') return;
-    demo.raf = requestAnimationFrame(demoFrame);
-  };
-
-  function endDemo(clearInk: boolean): void {
-    const d = demo;
-    if (!d) return;
-    demo = null;
-    if (d.raf !== null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(d.raf);
-    if (clearInk) gPaint(d.info, 0); // hand back a blank stroke for the user to draw
-    d.resolve();
+  function setGuidedProgress(index: number, t: number): void {
+    if (!guidedInfos) return;
+    if (index < 0 || index >= guidedInfos.length) return;
+    // A stroke being dragged must not be yanked out from under a finger. A host
+    // that means to take over calls `setGuidedInputEnabled(false)` first, which
+    // also drops the drag.
+    if (guidedDragging) return;
+    gPaint(guidedInfos[index], clamp01(t));
   }
 
-  function demoFrame(time: number): void {
-    if (!demo) return;
-    demo.raf = null;
-    if (demo.t0 === null) demo.t0 = time;
-    const dt = time - demo.t0;
-
-    if (dt < demo.durationMs) {
-      // Linear, on purpose. An eased write decelerates near the end, which reads
-      // as the pen hesitating rather than as handwriting.
-      const t = clamp01(dt / demo.durationMs);
-      gPaint(demo.info, t);
-      fireIsolated<GlamGuidedEvent>(guidedListeners, {
-        index: demo.index,
-        progress: t,
-        done: false,
-        demo: true,
-      });
-      scheduleDemo();
-      return;
-    }
-
-    if (dt < demo.durationMs + demo.holdMs) {
-      gPaint(demo.info, 1); // hold the finished letterform so it can be read
-      scheduleDemo();
-      return;
-    }
-
-    const index = demo.index;
-    const kept = demo.keepInk;
-    endDemo(!kept);
-    // Progress reports what is actually on the canvas: 0 when the ink was cleared
-    // for the user to draw, 1 when `keepInk` left the finished stroke standing.
-    fireIsolated<GlamGuidedEvent>(guidedListeners, {
-      index,
-      progress: kept ? 1 : 0,
-      done: true,
-      demo: true,
-    });
-  }
-
-  function demoGuided(opts?: {
-    index?: number;
-    durationMs?: number;
-    holdMs?: number;
-    keepInk?: boolean;
-  }): Promise<void> {
-    // Ending the previous demo clears ITS OWN stroke, which is right when the canvas
-    // is being handed back — but wrong when that demo is a keep-ink run being
-    // interrupted, since its whole purpose was to leave the stroke standing. So a
-    // keep-ink call ends the outgoing one without clearing. (A demo that already
-    // finished is not affected either way: `endDemo` no-ops once it is gone, so
-    // strokes left by completed keep-ink runs persist until `resetGuided`.)
-    const keepInk = opts?.keepInk === true;
-    endDemo(!keepInk);
-    if (!guidedInfos) return Promise.resolve();
-    const index = opts?.index ?? guidedIdx;
-    if (index < 0 || index >= guidedInfos.length) return Promise.resolve();
-    // A stroke already being dragged must not be yanked out from under a finger.
-    if (guidedDragging) return Promise.resolve();
-
-    const info = guidedInfos[index];
-    return new Promise<void>((resolve) => {
-      demo = {
-        info,
-        index,
-        durationMs: Math.max(1, opts?.durationMs ?? 1400),
-        holdMs: Math.max(0, opts?.holdMs ?? 350),
-        keepInk,
-        t0: null,
-        resolve,
-        raf: null,
-      };
-      gPaint(info, 0);
-      scheduleDemo();
-    });
-  }
-
-  function cancelGuidedDemo(): void {
-    endDemo(true);
+  function setGuidedInputEnabled(enabled: boolean): void {
+    guidedInputEnabled = enabled;
+    if (!enabled) guidedDragging = false;
   }
 
   function resetGuided(): void {
-    endDemo(false); // stop any demo without a clear; the loop below clears everything
     if (!guidedInfos) return;
     guidedIdx = 0;
     guidedProgress = 0;
@@ -571,10 +462,9 @@ export function renderGlamour(
 
   function guidedHandle(type: 'down' | 'move' | 'up', x: number, y: number): void {
     if (!guidedInfos || guidedIdx >= guidedInfos.length) return;
-    // While a demo plays the stroke is being shown, not offered. Swallowing input
-    // here rather than in the host keeps every host consistent, and a host that
-    // wants an impatient child to be able to skip ahead calls cancelGuidedDemo.
-    if (demo) return;
+    // Input turned off by the host — it is driving progress itself, so the stroke
+    // is being shown rather than offered.
+    if (!guidedInputEnabled) return;
     const info = guidedInfos[guidedIdx];
     if (type === 'down') {
       const tip = gAt(info, guidedProgress);
@@ -691,15 +581,6 @@ export function renderGlamour(
   }
 
   function destroy(): void {
-    // Before the scene goes: a demo in flight holds a pending promise a host may
-    // be awaiting, and `endDemo` repaints — so resolve it WITHOUT touching nodes
-    // that are about to be destroyed.
-    if (demo) {
-      const d = demo;
-      demo = null;
-      if (d.raf !== null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(d.raf);
-      d.resolve();
-    }
     runLoop?.destroy();
     actor?.stop();
     scene.destroy();
@@ -721,8 +602,8 @@ export function renderGlamour(
     onPointer,
     onStroke,
     onGuided,
-    demoGuided,
-    cancelGuidedDemo,
+    setGuidedProgress,
+    setGuidedInputEnabled,
     resetGuided,
     destroy,
   };
@@ -740,13 +621,6 @@ export function renderGlamour(
   // has no real pointer positions for scene.stage.getPointerPosition().
   Object.defineProperty(player, '__pointer', {
     value: (type: 'down' | 'move' | 'up', x: number, y: number) => handlePointer(type, x, y),
-    enumerable: false,
-  });
-  // Guided-demo test hook: step the demo with an injected timestamp. Without it a
-  // test would have to wait on real animation frames, which makes the whole
-  // demo-then-trace sequence untestable at any useful speed.
-  Object.defineProperty(player, '__demoFrame', {
-    value: (time: number) => demoFrame(time),
     enumerable: false,
   });
   return player;
