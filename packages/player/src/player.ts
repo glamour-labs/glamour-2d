@@ -147,6 +147,19 @@ export interface GlamPlayer {
 export interface RenderGlamourOpts {
   /** Apply state `set` targets with zero-duration tweens (deterministic final frame). */
   instantTransitions?: boolean;
+  /**
+   * Backing-store scale. Defaults to the display's own `devicePixelRatio`.
+   *
+   * `buildScene` defaults this to 1 because a headless render has to be
+   * deterministic — but a canvas on a real screen must not. At 1 the backing store
+   * is the document's own pixel size and the browser upscales it to the physical
+   * pixels of a 2x display, which is visibly soft: the ink's edges blur where every
+   * other element on the page is sharp.
+   *
+   * Capped at 3. Past that the gain is invisible and the fill cost is not — a 4x
+   * backing store is sixteen times the pixels of a 1x one.
+   */
+  dpr?: number;
 }
 
 /** Node pointer event name -> the doc-facing event name (wired set only). */
@@ -162,7 +175,11 @@ export function renderGlamour(
   opts: RenderGlamourOpts = {},
 ): GlamPlayer {
   const instant = opts.instantTransitions ?? false;
-  const scene = buildScene(doc, mount);
+  const dpr = Math.min(
+    3,
+    Math.max(1, opts.dpr ?? (typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1)),
+  );
+  const scene = buildScene(doc, mount, { dpr });
   const inputs: Record<string, number | string> = { ...(doc.inputs ?? {}) };
 
   let actor: Actor<AnyStateMachine> | null = null;
