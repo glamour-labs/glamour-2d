@@ -46,6 +46,8 @@ export interface GlamNode {
   cap?: 'butt' | 'round'; // arc: end shape of the band
   size?: number; // text
   fontStyle?: string; // text: 'normal' | 'bold' | 'italic' | 'italic bold'
+  align?: 'left' | 'center' | 'right'; // text: which part of the line sits on x
+  valign?: 'top' | 'middle' | 'bottom'; // text: which part of the line sits on y
   fill?: string;
   fillGradient?: GlamGradient; // v1.1: gradient fill (overrides flat fill)
   stroke?: string;

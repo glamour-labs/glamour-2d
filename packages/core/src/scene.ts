@@ -52,6 +52,8 @@ export const PROP_TO_METHOD: Record<string, string> = {
   text: 'text',
   size: 'fontSize',
   fontStyle: 'fontStyle',
+  align: 'align',
+  valign: 'valign',
   fill: 'fill',
   stroke: 'stroke',
   strokeWidth: 'strokeWidth',
@@ -99,7 +101,7 @@ const NON_NEGATIVE_METHODS = new Set(
 
 /** Strings no numeric interpolation can handle — always applied instantly. */
 function isInstantOnlyProp(prop: string): boolean {
-  return prop === 'text' || prop === 'fontStyle';
+  return prop === 'text' || prop === 'fontStyle' || prop === 'align' || prop === 'valign';
 }
 
 type PropValue = number | string | number[] | boolean | undefined;
@@ -125,6 +127,9 @@ const IMAGE_ACCESSORS = ['src', 'fit'] as const;
 
 /** Arc-only accessor. */
 const ARC_ACCESSORS = ['cap'] as const;
+
+/** Text-only accessors, so a host can re-align a label at runtime. */
+const TEXT_ACCESSORS = ['align', 'valign'] as const;
 
 /** Konva class names, kept so type-assertion tests stay meaningful. */
 const CLASS_NAMES: Record<string, string> = {
@@ -166,6 +171,7 @@ export class NodeHandle {
     if (kind === 'stroke') names.push(...STROKE_ACCESSORS);
     if (kind === 'image') names.push(...IMAGE_ACCESSORS);
     if (kind === 'arc') names.push(...ARC_ACCESSORS);
+    if (kind === 'text') names.push(...TEXT_ACCESSORS);
     for (const name of names) {
       // Konva semantics: no-arg reads, one-arg writes and returns `this`.
       (this as unknown as Record<string, unknown>)[name] = (v?: PropValue): unknown => {
@@ -297,16 +303,60 @@ export class NodeHandle {
       this.raster = { key, value: rasterizeText(spec) };
     }
     const base = this.raster.value;
-    if (!base || rasterSize === wanted) return base;
+    if (!base) return null;
 
     // Same bitmap, metrics scaled to the size actually asked for. Callers use
     // w/h/padX/padY to place the quad, so scaling those places it correctly
     // without touching the geometry or paint code.
-    const k = wanted / rasterSize;
-    return { source: base.source, w: base.w * k, h: base.h * k, padX: base.padX * k, padY: base.padY * k };
+    const k = rasterSize === wanted ? 1 : wanted / rasterSize;
+    const w = base.w * k;
+    const h = base.h * k;
+    const padX = base.padX * k;
+    const padY = base.padY * k;
+    const inkTop = base.inkTop * k;
+    const inkBottom = base.inkBottom * k;
+
+    // Alignment rides on the padding for the same reason: geometry, paint and
+    // hit-testing all derive the quad from padX/padY, so shifting those is the
+    // one place that moves every one of them consistently.
+    const a = this.alignShift({ advW: w - padX * 2, lineH: h - padY * 2, inkTop, inkBottom });
+    if (k === 1 && a.dx === 0 && a.dy === 0) return base;
+    return { source: base.source, w, h, padX: padX + a.dx, padY: padY + a.dy, inkTop, inkBottom };
   }
 
-  textSize(): { w: number; h: number } {
+  /**
+   * How far to pull the text box back so the requested part of it lands on the
+   * node's x/y.
+   *
+   * The two axes deliberately measure different things.
+   *
+   * Horizontally it is the ADVANCE width, not the ink: a label whose text
+   * changes must not slide sideways because the new string happens to have
+   * tighter side bearings, so a row of centred labels stays on a common grid.
+   *
+   * Vertically it is the INK, not the line box. A top-baselined line box
+   * reserves height for accents and descenders that a row of capitals never
+   * uses, so centring the box sits the letters about 0.18em high — small on a
+   * paragraph, glaring on a single letter inside a circle.
+   */
+  alignShift(m: { advW: number; lineH: number; inkTop: number; inkBottom: number }): {
+    dx: number;
+    dy: number;
+  } {
+    if (this.kind !== 'text') return { dx: 0, dy: 0 };
+    const align = this.props.align;
+    const valign = this.props.valign;
+    const dx = align === 'center' ? m.advW / 2 : align === 'right' ? m.advW : 0;
+    const dy =
+      valign === 'middle'
+        ? (m.inkTop + m.inkBottom) / 2
+        : valign === 'bottom'
+          ? m.inkBottom
+          : 0;
+    return { dx, dy };
+  }
+
+  textSize(): { w: number; h: number; inkTop: number; inkBottom: number } {
     return measureText({
       text: String(this.props.text ?? ''),
       size: num(this.props.fontSize, 16),
@@ -804,7 +854,13 @@ class SceneCore {
         if (r) m.rect(-r.padX, -r.padY, r.w, r.h);
         else {
           const size = node.textSize();
-          m.rect(0, 0, size.w, size.h);
+          const a = node.alignShift({
+            advW: size.w,
+            lineH: size.h,
+            inkTop: size.inkTop,
+            inkBottom: size.inkBottom,
+          });
+          m.rect(-a.dx, -a.dy, size.w, size.h);
         }
         break;
       }
@@ -1021,8 +1077,16 @@ class SceneCore {
         return lx >= 0 && lx <= w && ly >= 0 && ly <= h;
       }
       case 'text': {
+        // The hit box has to follow the alignment, or a centred label stays
+        // tappable only where it USED to be drawn.
         const s = node.textSize();
-        return lx >= 0 && lx <= s.w && ly >= 0 && ly <= s.h;
+        const a = node.alignShift({
+          advW: s.w,
+          lineH: s.h,
+          inkTop: s.inkTop,
+          inkBottom: s.inkBottom,
+        });
+        return lx >= -a.dx && lx <= s.w - a.dx && ly >= -a.dy && ly <= s.h - a.dy;
       }
       case 'stroke': {
         const raw = Array.isArray(node.props.points) ? (node.props.points as number[]) : [];
@@ -1457,6 +1521,10 @@ function buildNodeHandle(node: GlamNode, core: SceneCore): NodeHandle {
       p.text = node.text ?? '';
       p.fontSize = node.size ?? 16;
       p.fontStyle = normalizeFontStyle(node.fontStyle ?? 'normal');
+      // Defaults are the pen origin, which is what every document written
+      // before these existed already assumes.
+      p.align = node.align ?? 'left';
+      p.valign = node.valign ?? 'top';
       break;
     case 'stroke':
       p.points = [...(node.points ?? [])];

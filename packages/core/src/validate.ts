@@ -24,7 +24,7 @@ const COMMON_PROPS = [
 const PROPS_BY_TYPE: Record<NodeType, string[]> = {
   circle: [...COMMON_PROPS, 'r'],
   rect: [...COMMON_PROPS, 'w', 'h', 'cornerRadius'],
-  text: [...COMMON_PROPS, 'text', 'size', 'fontStyle'],
+  text: [...COMMON_PROPS, 'text', 'size', 'fontStyle', 'align', 'valign'],
   ellipse: [...COMMON_PROPS, 'rx', 'ry'],
   arc: [...COMMON_PROPS, 'innerRadius', 'outerRadius', 'angle', 'cap'],
   // stroke's `points` are inked/drawn, not bound/set — only the common
@@ -57,8 +57,10 @@ const NUMERIC_PROPS = new Set([
   'shadowBlur',
   'shadowOpacity',
 ]);
-const STRING_PROPS = new Set(['text', 'fill', 'stroke', 'fontStyle']);
+const STRING_PROPS = new Set(['text', 'fill', 'stroke', 'fontStyle', 'align', 'valign']);
 const ALLOWED_FONT_STYLES = new Set(['normal', 'bold', 'italic', 'italic bold', 'bold italic']);
+const ALLOWED_ALIGN = new Set(['left', 'center', 'right']);
+const ALLOWED_VALIGN = new Set(['top', 'middle', 'bottom']);
 
 function isAnimatableProp(node: GlamNode, prop: string): boolean {
   return PROPS_BY_TYPE[node.type].includes(prop);
@@ -105,6 +107,11 @@ export function validate(docInput: unknown): ValidateResult {
         `node "${node.id}" has invalid fontStyle "${node.fontStyle}" (allowed: normal, bold, italic, "italic bold")`,
       );
     }
+
+    // NOTE: `align`/`valign` need no guard here — unlike `fontStyle` (a bare
+    // string in the schema) they are schema enums, so a typo is already a parse
+    // error. They ARE guarded on machine `set` values below, where the schema
+    // cannot see the type.
 
     // A negative radius-family dimension throws in the canvas at paint time —
     // refuse it statically (this also closes the same latent gap for the
@@ -352,6 +359,17 @@ export function validate(docInput: unknown): ValidateResult {
           // an invalid style would silently render plain (v1.1).
           errors.push(
             `state "${stateName}" has "set" value for "${setKey}" with invalid fontStyle "${setValue}" (allowed: normal, bold, italic, "italic bold")`,
+          );
+        } else if (prop === 'align' && typeof setValue === 'string' && !ALLOWED_ALIGN.has(setValue)) {
+          // The node-level case is caught by the schema enum; a `set` value is
+          // an untyped string, so it needs the same guard here or a typo
+          // silently reverts the label to the pen origin.
+          errors.push(
+            `state "${stateName}" has "set" value for "${setKey}" with invalid align "${setValue}" (allowed: left, center, right)`,
+          );
+        } else if (prop === 'valign' && typeof setValue === 'string' && !ALLOWED_VALIGN.has(setValue)) {
+          errors.push(
+            `state "${stateName}" has "set" value for "${setKey}" with invalid valign "${setValue}" (allowed: top, middle, bottom)`,
           );
         }
       }

@@ -55,6 +55,18 @@ const nodeSchema = z.object({
   cap: z.enum(['butt', 'round']).optional(),
   size: z.number().optional(),
   fontStyle: z.string().optional(),
+  /**
+   * Which part of the text's own box lands on the node's `x`/`y`. Without
+   * these a text node's x/y is the pen origin — the left edge of the first
+   * glyph, on the top of the line — so a caller wanting a label centred in a
+   * shape had to guess half the string's width itself. That guess is a fixed
+   * fraction of the font size in practice, and it is wrong for every glyph
+   * whose advance is not exactly that fraction: a bold "I" lands 0.16em left
+   * of where it was asked for and a bold "W" 0.17em right. Defaults keep the
+   * old pen-origin behaviour, so existing documents do not move.
+   */
+  align: z.enum(['left', 'center', 'right']).optional(),
+  valign: z.enum(['top', 'middle', 'bottom']).optional(),
   fill: z.string().optional(),
   fillGradient: gradientSchema.optional(),
   stroke: z.string().optional(),

@@ -52,7 +52,7 @@ export default defineWorkspace([
     test: {
       name: 'browser',
       include: [
-        'packages/core/test/{scene,paint,context-loss,image}.test.ts',
+        'packages/core/test/{scene,paint,context-loss,image,align}.test.ts',
         'packages/player/test/{player,ink,harness,guided,guided-progress,webcomponent,loop}.test.ts',
         'packages/react/test/**/*.test.{ts,tsx}',
         'apps/studio/test/**/*.test.{ts,tsx}',

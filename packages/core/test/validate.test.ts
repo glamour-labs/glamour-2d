@@ -773,3 +773,39 @@ test('rejects an invalid fontStyle in a machine state "set" (v1.1 parity with no
   expect(r.ok).toBe(false);
   expect(r.errors.join()).toMatch(/invalid fontStyle/);
 });
+
+test('rejects a misspelled align rather than letting it fall back to the pen origin', () => {
+  const doc = {
+    schema: 'glamour/v0.1',
+    canvas: { w: 100, h: 100 },
+    nodes: [{ id: 't', type: 'text', x: 50, y: 50, text: 'A', align: 'centre' }],
+  };
+  const r = validate(doc);
+  expect(r.ok).toBe(false);
+  expect(r.errors.join()).toMatch(/align.*Expected 'left' \| 'center' \| 'right'/);
+});
+
+test('rejects an invalid align in a machine state "set", where the schema cannot see it', () => {
+  const doc: GlamDoc = {
+    schema: 'glamour/v0.1',
+    canvas: { w: 100, h: 100 },
+    nodes: [{ id: 't', type: 'text', x: 50, y: 50, text: 'A', align: 'center' }],
+    machine: {
+      initial: 'idle',
+      states: { idle: { set: { 't.align': 'centre' } } },
+    },
+  };
+  const r = validate(doc);
+  expect(r.ok).toBe(false);
+  expect(r.errors.join()).toMatch(/invalid align/);
+});
+
+test('accepts align and valign, and treats them as animatable text props', () => {
+  const doc: GlamDoc = {
+    schema: 'glamour/v0.1',
+    canvas: { w: 100, h: 100 },
+    nodes: [{ id: 't', type: 'text', x: 50, y: 50, text: 'A', align: 'center', valign: 'middle' }],
+  };
+  const r = validate(doc);
+  expect(r.ok).toBe(true);
+});
