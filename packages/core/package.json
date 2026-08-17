@@ -1,6 +1,6 @@
 {
   "name": "@glamour-labs/core",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Headless engine for the glamour/v0 format — schema, validate, applyOps, and the env-agnostic scene + state-machine builder.",
   "keywords": [
     "glamour",
