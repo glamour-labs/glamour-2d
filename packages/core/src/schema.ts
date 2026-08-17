@@ -56,6 +56,13 @@ const nodeSchema = z.object({
   size: z.number().optional(),
   fontStyle: z.string().optional(),
   /**
+   * Font family. Omitted means the renderer's default, which is what every
+   * document written before this field got. A family the page has declared but
+   * not yet downloaded is loaded on demand and the text re-rasterised when it
+   * lands, so a label never gets stuck in the fallback.
+   */
+  fontFamily: z.string().optional(),
+  /**
    * Which part of the text's own box lands on the node's `x`/`y`. Without
    * these a text node's x/y is the pen origin — the left edge of the first
    * glyph, on the top of the line — so a caller wanting a label centred in a

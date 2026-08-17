@@ -153,3 +153,31 @@ test('a centred label is tappable where it is drawn, not where the pen is', () =
   expect(scene.getIntersection({ x: 190, y: 30 })?._docId).toBe('t');
   scene.destroy();
 });
+
+test('a text node renders in the family it asks for', () => {
+  // Two families with visibly different metrics: if fontFamily were ignored,
+  // both would rasterise identically and the widths would match exactly.
+  const a = drawn([{ ...BASE, id: 't', x: 20, text: 'MMM', fontFamily: 'Arial' }]);
+  const wa = inkSpan(a).max - inkSpan(a).min;
+  a.destroy();
+  const b = drawn([{ ...BASE, id: 't', x: 20, text: 'MMM', fontFamily: 'Times New Roman' }]);
+  const wb = inkSpan(b).max - inkSpan(b).min;
+  b.destroy();
+  expect(Math.abs(wa - wb)).toBeGreaterThan(2);
+});
+
+test('an unknown family falls back rather than drawing nothing', () => {
+  const scene = drawn([{ ...BASE, id: 't', x: 20, text: 'AB', fontFamily: 'NoSuchFamilyHere' }]);
+  // The assertion is simply that ink exists — inkSpan throws when it does not.
+  const ink = inkSpan(scene);
+  expect(ink.max).toBeGreaterThan(ink.min);
+  scene.destroy();
+});
+
+test('centring still holds when the family is overridden', () => {
+  const scene = drawn([
+    { ...BASE, id: 't', x: 200, text: 'W', fontFamily: 'Georgia', align: 'center' },
+  ]);
+  expect(Math.abs(inkSpan(scene).centre - 200)).toBeLessThan(4);
+  scene.destroy();
+});

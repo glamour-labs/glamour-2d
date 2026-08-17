@@ -2,7 +2,7 @@ import { evalExpr } from './expr.js';
 import type { GlamDoc, GlamNode } from './types.js';
 import { GlRenderer, parseColor, type Paint, type Rgba, type ShadowPaint } from './gl/renderer.js';
 import { Mesh, dashify, tensionize, arcLengths, segsFor } from './gl/mesh.js';
-import { measureText, rasterizeText, textKey, type TextRaster } from './gl/text.js';
+import { ensureFont, measureText, rasterizeText, textKey, type TextRaster } from './gl/text.js';
 import { getImage, fitBox, type ImageFit } from './gl/image.js';
 
 /**
@@ -52,6 +52,7 @@ export const PROP_TO_METHOD: Record<string, string> = {
   text: 'text',
   size: 'fontSize',
   fontStyle: 'fontStyle',
+  fontFamily: 'fontFamily',
   align: 'align',
   valign: 'valign',
   fill: 'fill',
@@ -101,7 +102,13 @@ const NON_NEGATIVE_METHODS = new Set(
 
 /** Strings no numeric interpolation can handle — always applied instantly. */
 function isInstantOnlyProp(prop: string): boolean {
-  return prop === 'text' || prop === 'fontStyle' || prop === 'align' || prop === 'valign';
+  return (
+    prop === 'text' ||
+    prop === 'fontStyle' ||
+    prop === 'fontFamily' ||
+    prop === 'align' ||
+    prop === 'valign'
+  );
 }
 
 type PropValue = number | string | number[] | boolean | undefined;
@@ -129,7 +136,7 @@ const IMAGE_ACCESSORS = ['src', 'fit'] as const;
 const ARC_ACCESSORS = ['cap'] as const;
 
 /** Text-only accessors, so a host can re-align a label at runtime. */
-const TEXT_ACCESSORS = ['align', 'valign'] as const;
+const TEXT_ACCESSORS = ['align', 'valign', 'fontFamily'] as const;
 
 /** Konva class names, kept so type-assertion tests stay meaningful. */
 const CLASS_NAMES: Record<string, string> = {
@@ -181,7 +188,7 @@ export class NodeHandle {
         // size, so dropping the raster here is redundant — and it defeats the
         // ladder, because an animating node would throw away the very bitmap
         // the ladder exists to reuse.
-        if (name === 'text' || name === 'fontStyle' || name === 'fill') {
+        if (name === 'text' || name === 'fontStyle' || name === 'fontFamily' || name === 'fill') {
           this.raster = null;
         }
         this.scene?.markDirty();
@@ -293,11 +300,19 @@ export class NodeHandle {
     const spec = {
       text: String(this.props.text ?? ''),
       size: rasterSize,
-      fontFamily: DEFAULT_FONT_FAMILY,
+      fontFamily: String(this.props.fontFamily ?? DEFAULT_FONT_FAMILY),
       fontStyle: normalizeFontStyle(this.props.fontStyle),
       fill: String(this.props.fill ?? '#000000'),
       dpr,
     };
+    // A declared-but-not-yet-downloaded family would rasterise in the fallback
+    // and stay there, because the cache key cannot tell the two apart. Draw the
+    // fallback now (better than a blank frame) and throw it away when the real
+    // face lands.
+    ensureFont(spec, () => {
+      this.raster = null;
+      this.scene?.markDirty();
+    });
     const key = textKey(spec);
     if (!this.raster || this.raster.key !== key) {
       this.raster = { key, value: rasterizeText(spec) };
@@ -360,7 +375,7 @@ export class NodeHandle {
     return measureText({
       text: String(this.props.text ?? ''),
       size: num(this.props.fontSize, 16),
-      fontFamily: DEFAULT_FONT_FAMILY,
+      fontFamily: String(this.props.fontFamily ?? DEFAULT_FONT_FAMILY),
       fontStyle: normalizeFontStyle(this.props.fontStyle),
       fill: String(this.props.fill ?? '#000000'),
       dpr: 1,
@@ -941,7 +956,7 @@ class SceneCore {
         `${node._docId}:${textKey({
           text: String(node.props.text ?? ''),
           size: num(node.props.fontSize, 16),
-          fontFamily: DEFAULT_FONT_FAMILY,
+          fontFamily: String(node.props.fontFamily ?? DEFAULT_FONT_FAMILY),
           fontStyle: normalizeFontStyle(node.props.fontStyle),
           fill: String(node.props.fill ?? '#000'),
           dpr: this.dpr,
@@ -1521,6 +1536,7 @@ function buildNodeHandle(node: GlamNode, core: SceneCore): NodeHandle {
       p.text = node.text ?? '';
       p.fontSize = node.size ?? 16;
       p.fontStyle = normalizeFontStyle(node.fontStyle ?? 'normal');
+      p.fontFamily = node.fontFamily ?? DEFAULT_FONT_FAMILY;
       // Defaults are the pen origin, which is what every document written
       // before these existed already assumes.
       p.align = node.align ?? 'left';

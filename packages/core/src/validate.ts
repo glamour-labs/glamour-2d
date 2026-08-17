@@ -24,7 +24,7 @@ const COMMON_PROPS = [
 const PROPS_BY_TYPE: Record<NodeType, string[]> = {
   circle: [...COMMON_PROPS, 'r'],
   rect: [...COMMON_PROPS, 'w', 'h', 'cornerRadius'],
-  text: [...COMMON_PROPS, 'text', 'size', 'fontStyle', 'align', 'valign'],
+  text: [...COMMON_PROPS, 'text', 'size', 'fontStyle', 'fontFamily', 'align', 'valign'],
   ellipse: [...COMMON_PROPS, 'rx', 'ry'],
   arc: [...COMMON_PROPS, 'innerRadius', 'outerRadius', 'angle', 'cap'],
   // stroke's `points` are inked/drawn, not bound/set — only the common
@@ -57,7 +57,7 @@ const NUMERIC_PROPS = new Set([
   'shadowBlur',
   'shadowOpacity',
 ]);
-const STRING_PROPS = new Set(['text', 'fill', 'stroke', 'fontStyle', 'align', 'valign']);
+const STRING_PROPS = new Set(['text', 'fill', 'stroke', 'fontStyle', 'fontFamily', 'align', 'valign']);
 const ALLOWED_FONT_STYLES = new Set(['normal', 'bold', 'italic', 'italic bold', 'bold italic']);
 const ALLOWED_ALIGN = new Set(['left', 'center', 'right']);
 const ALLOWED_VALIGN = new Set(['top', 'middle', 'bottom']);
