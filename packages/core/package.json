@@ -1,8 +1,16 @@
 {
   "name": "@glamour-labs/core",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Headless engine for the glamour/v0 format — schema, validate, applyOps, and the env-agnostic scene + state-machine builder.",
-  "keywords": ["glamour", "glam", "animation", "interactive", "webgl", "vector", "canvas"],
+  "keywords": [
+    "glamour",
+    "glam",
+    "animation",
+    "interactive",
+    "webgl",
+    "vector",
+    "canvas"
+  ],
   "license": "MIT",
   "author": "Kha Vu",
   "homepage": "https://github.com/glamour-labs/glamour-2d#readme",
