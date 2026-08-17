@@ -1,4 +1,4 @@
-export type NodeType = 'circle' | 'rect' | 'text' | 'ellipse' | 'arc' | 'stroke';
+export type NodeType = 'circle' | 'rect' | 'text' | 'ellipse' | 'arc' | 'stroke' | 'image';
 
 // v1.1: `backInOut` (spring overshoot) + `elasticOut` (settle-with-wobble) join
 // the base four. Both intentionally overshoot the 0..1 range mid-curve — that
@@ -41,6 +41,9 @@ export interface GlamNode {
   closed?: boolean; // stroke: connect last point back to first
   dash?: number[]; // stroke: dash pattern [dashLen, gapLen, ...] (omit = solid)
   text?: string; // text
+  src?: string; // image: URL or data: URI, loaded asynchronously
+  fit?: 'cover' | 'contain' | 'fill'; // image: how it fills the node's shape
+  cap?: 'butt' | 'round'; // arc: end shape of the band
   size?: number; // text
   fontStyle?: string; // text: 'normal' | 'bold' | 'italic' | 'italic bold'
   fill?: string;

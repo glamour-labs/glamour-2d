@@ -3,6 +3,7 @@ import type { GlamDoc, GlamNode } from './types.js';
 import { GlRenderer, parseColor, type Paint, type Rgba, type ShadowPaint } from './gl/renderer.js';
 import { Mesh, dashify, tensionize, arcLengths, segsFor } from './gl/mesh.js';
 import { measureText, rasterizeText, textKey, type TextRaster } from './gl/text.js';
+import { getImage, fitBox, type ImageFit } from './gl/image.js';
 
 /**
  * v2: the scene is backed by WebGL2 (gl/renderer.ts) instead of Konva.
@@ -58,6 +59,12 @@ export const PROP_TO_METHOD: Record<string, string> = {
   rotation: 'rotation',
   shadowBlur: 'shadowBlur',
   shadowOpacity: 'shadowOpacity',
+  cap: 'cap',
+  // `image` nodes. Settable at runtime on purpose: one document with twelve
+  // image nodes can show twelve different pictures, which is what a host
+  // binding backend content to a scene actually needs.
+  src: 'src',
+  fit: 'fit',
 };
 
 /** Kept as an alias so v1 imports keep resolving during the port. */
@@ -113,6 +120,12 @@ const ACCESSORS = [
  */
 const STROKE_ACCESSORS = ['points', 'dash', 'tension', 'closed'] as const;
 
+/** Image-only accessors, attached ONLY to `image` nodes — same rule as above. */
+const IMAGE_ACCESSORS = ['src', 'fit'] as const;
+
+/** Arc-only accessor. */
+const ARC_ACCESSORS = ['cap'] as const;
+
 /** Konva class names, kept so type-assertion tests stay meaningful. */
 const CLASS_NAMES: Record<string, string> = {
   circle: 'Circle',
@@ -121,6 +134,7 @@ const CLASS_NAMES: Record<string, string> = {
   rect: 'Rect',
   text: 'Text',
   stroke: 'Line',
+  image: 'Image',
   group: 'Group',
 };
 
@@ -137,6 +151,12 @@ export class NodeHandle {
   gradient: GlamNode['fillGradient'];
   private scene: SceneCore | null = null;
   private raster: { key: string; value: TextRaster | null } | null = null;
+  /**
+   * Set once a node is seen rendering at a SECOND font size — i.e. its size is
+   * animating. See `textRaster`.
+   */
+  private sizeAnimates = false;
+  private lastRasterSize = -1;
   private listeners = new Map<string, Array<(e?: unknown) => void>>();
 
   constructor(kind: GlamNode['type'] | 'group', scene: SceneCore | null) {
@@ -144,12 +164,18 @@ export class NodeHandle {
     this.scene = scene;
     const names: string[] = [...ACCESSORS];
     if (kind === 'stroke') names.push(...STROKE_ACCESSORS);
+    if (kind === 'image') names.push(...IMAGE_ACCESSORS);
+    if (kind === 'arc') names.push(...ARC_ACCESSORS);
     for (const name of names) {
       // Konva semantics: no-arg reads, one-arg writes and returns `this`.
       (this as unknown as Record<string, unknown>)[name] = (v?: PropValue): unknown => {
         if (v === undefined) return this.props[name];
         this.props[name] = v;
-        if (name === 'text' || name === 'fontSize' || name === 'fontStyle' || name === 'fill') {
+        // NOT fontSize: `textRaster` compares a key that already includes the
+        // size, so dropping the raster here is redundant — and it defeats the
+        // ladder, because an animating node would throw away the very bitmap
+        // the ladder exists to reuse.
+        if (name === 'text' || name === 'fontStyle' || name === 'fill') {
           this.raster = null;
         }
         this.scene?.markDirty();
@@ -229,22 +255,55 @@ export class NodeHandle {
     this.raster = null;
   }
 
-  /** Cached text raster, re-rasterized only when a text-affecting prop changed. */
+  /**
+   * Cached text raster, re-rasterized only when a text-affecting prop changed.
+   *
+   * A node whose `size` ANIMATES is a different problem from one that simply
+   * has a size. The cache keys on the spec, size included, so a label growing
+   * with the shape it sits in misses on every single frame and re-rasterizes —
+   * measured at roughly 0.75ms per label per frame, which with a handful of
+   * them on screen is most of a frame budget. The original note here assumed
+   * "`size` changes are rare"; animated text breaks that assumption completely.
+   *
+   * The fix is to rasterize on a coarse LADDER and scale the quad by the
+   * remainder, so a sweep from 5px to 190px reuses a handful of bitmaps instead
+   * of minting one per frame. Because that trades a little crispness, a node
+   * opts in by BEHAVING like an animation: the first size a node renders at is
+   * rasterized exactly, and only when a second, different size arrives does it
+   * move to the ladder. Static documents are therefore byte-identical, and only
+   * the nodes that actually animate pay the (invisible) resampling cost.
+   */
   textRaster(dpr: number): TextRaster | null {
     if (this.kind !== 'text') return null;
+    const wanted = num(this.props.fontSize, 16);
+    if (this.lastRasterSize >= 0 && this.lastRasterSize !== wanted) this.sizeAnimates = true;
+    this.lastRasterSize = wanted;
+
+    // Round UP to the ladder: downscaling a crisp bitmap reads clean, upscaling
+    // does not.
+    const step = 16;
+    const rasterSize = this.sizeAnimates ? Math.max(step, Math.ceil(wanted / step) * step) : wanted;
+
     const spec = {
       text: String(this.props.text ?? ''),
-      size: num(this.props.fontSize, 16),
+      size: rasterSize,
       fontFamily: DEFAULT_FONT_FAMILY,
       fontStyle: normalizeFontStyle(this.props.fontStyle),
       fill: String(this.props.fill ?? '#000000'),
       dpr,
     };
     const key = textKey(spec);
-    if (this.raster && this.raster.key === key) return this.raster.value;
-    const value = rasterizeText(spec);
-    this.raster = { key, value };
-    return value;
+    if (!this.raster || this.raster.key !== key) {
+      this.raster = { key, value: rasterizeText(spec) };
+    }
+    const base = this.raster.value;
+    if (!base || rasterSize === wanted) return base;
+
+    // Same bitmap, metrics scaled to the size actually asked for. Callers use
+    // w/h/padX/padY to place the quad, so scaling those places it correctly
+    // without touching the geometry or paint code.
+    const k = wanted / rasterSize;
+    return { source: base.source, w: base.w * k, h: base.h * k, padX: base.padX * k, padY: base.padY * k };
   }
 
   textSize(): { w: number; h: number } {
@@ -715,11 +774,29 @@ class SceneCore {
         m.ellipse(0, 0, num(node.props.radiusX), num(node.props.radiusY));
         break;
       case 'arc':
-        m.ring(0, 0, num(node.props.innerRadius), num(node.props.outerRadius), num(node.props.angle));
+        m.ring(
+          0, 0,
+          num(node.props.innerRadius),
+          num(node.props.outerRadius),
+          num(node.props.angle),
+          node.props.cap === 'round' ? 'round' : 'butt',
+        );
         break;
       case 'rect':
         m.rect(0, 0, num(node.props.width), num(node.props.height), num(node.props.cornerRadius));
         break;
+      case 'image': {
+        // An image takes whichever shape props it was given, and that shape IS
+        // the crop: the mesh becomes the stencil, so an image node carrying
+        // rx/ry is a round-cropped picture with no clipping machinery at all.
+        const rx = num(node.props.radiusX);
+        const ry = num(node.props.radiusY);
+        const r = num(node.props.radius);
+        if (r > 0) m.circle(0, 0, r);
+        else if (rx > 0 && ry > 0) m.ellipse(0, 0, rx, ry);
+        else m.rect(0, 0, num(node.props.width), num(node.props.height), num(node.props.cornerRadius));
+        break;
+      }
       case 'text': {
         // Cover the FULL padded raster, so the stencil mask and the texture
         // quad have identical extent (a smaller mask would clip the glyph).
@@ -760,6 +837,46 @@ class SceneCore {
   }
 
   private paintFor(node: NodeHandle, abs: { x: number; y: number }, rot = 0): Paint | null {
+    if (node.kind === 'image') {
+      const src = typeof node.props.src === 'string' ? node.props.src : '';
+      if (!src) return null;
+      // Ask, never wait. If the bytes have not landed the node draws nothing
+      // this frame and the loader wakes us when they do — without that callback
+      // a still scene would load its pictures and never show them.
+      const rec = getImage(src, () => this.markDirty());
+      if (rec.state !== 'ready' || !rec.source) return null;
+
+      // The node's own box, in absolute pixels, matching the geometry above.
+      const r = num(node.props.radius);
+      const rx = num(node.props.radiusX);
+      const ry = num(node.props.radiusY);
+      const box =
+        r > 0
+          ? { x: abs.x - r, y: abs.y - r, w: r * 2, h: r * 2 }
+          : rx > 0 && ry > 0
+            ? { x: abs.x - rx, y: abs.y - ry, w: rx * 2, h: ry * 2 }
+            : { x: abs.x, y: abs.y, w: num(node.props.width), h: num(node.props.height) };
+      if (box.w <= 0 || box.h <= 0) return null;
+
+      const fit = (node.props.fit as ImageFit) ?? 'cover';
+      const mapped = fitBox(box, rec.w, rec.h, fit);
+      // Keyed for the renderer's texture cache: one upload per source, however
+      // many nodes point at it.
+      (rec.source as unknown as { __glamKey?: string }).__glamKey = `img:${src}`;
+      return {
+        kind: 'texture',
+        source: rec.source,
+        x: mapped.x,
+        y: mapped.y,
+        w: mapped.w,
+        h: mapped.h,
+        // The stencil is rotated geometry, so the sampler rotates with it.
+        originX: abs.x,
+        originY: abs.y,
+        rot,
+      };
+    }
+
     if (node.kind === 'text') {
       const raster = node.textRaster(this.dpr);
       if (!raster) return null;
@@ -1328,6 +1445,8 @@ function buildNodeHandle(node: GlamNode, core: SceneCore): NodeHandle {
       p.innerRadius = node.innerRadius ?? 0;
       p.outerRadius = node.outerRadius ?? 0;
       p.angle = node.angle ?? 0;
+      // Default 'butt' so every existing document renders byte-identically.
+      p.cap = node.cap ?? 'butt';
       break;
     case 'rect':
       p.width = node.w ?? 0;
@@ -1344,6 +1463,18 @@ function buildNodeHandle(node: GlamNode, core: SceneCore): NodeHandle {
       p.tension = node.tension ?? 0;
       p.closed = node.closed ?? false;
       if (node.dash) p.dash = [...node.dash];
+      break;
+    case 'image':
+      // Takes whichever shape it was given — circle, ellipse or rect — because
+      // that shape is also the crop.
+      p.radius = node.r ?? 0;
+      p.radiusX = node.rx ?? 0;
+      p.radiusY = node.ry ?? 0;
+      p.width = node.w ?? 0;
+      p.height = node.h ?? 0;
+      p.cornerRadius = node.cornerRadius ?? 0;
+      p.src = node.src ?? '';
+      p.fit = node.fit ?? 'cover';
       break;
     default:
       throw new Error(`scene: unknown node type "${node.type as string}"`);

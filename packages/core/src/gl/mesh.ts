@@ -92,7 +92,14 @@ export class Mesh {
    * Ring segment — the `arc` node type. `angle` is in degrees, swept clockwise
    * from 0 = +x, matching Konva.Arc.
    */
-  ring(cx: number, cy: number, inner: number, outer: number, angleDeg: number): void {
+  ring(
+    cx: number,
+    cy: number,
+    inner: number,
+    outer: number,
+    angleDeg: number,
+    cap: 'butt' | 'round' = 'butt',
+  ): void {
     const sweep = (angleDeg * Math.PI) / 180;
     if (Math.abs(sweep) < 1e-4 || outer <= 0) return;
     const n = Math.max(3, Math.ceil(segsFor(outer) * (Math.abs(sweep) / (Math.PI * 2))));
@@ -108,6 +115,17 @@ export class Mesh {
         cx + c1 * outer, cy + s1 * outer,
         cx + c1 * ri, cy + s1 * ri,
       );
+    }
+    // A round cap is a disc at each end, centred on the band's mid-radius —
+    // the same construction the polyline caps use, and free for the same
+    // reason: the renderer unions this node through a stencil, so overlapping
+    // triangles cannot produce a seam.
+    if (cap === 'round' && outer > ri) {
+      const mid = (ri + outer) / 2;
+      const capR = (outer - ri) / 2;
+      for (const a of [0, sweep]) {
+        this.circle(cx + Math.cos(a) * mid, cy + Math.sin(a) * mid, capR);
+      }
     }
   }
 

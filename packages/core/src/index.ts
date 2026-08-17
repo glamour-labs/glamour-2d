@@ -12,6 +12,8 @@ export type {
   GlamGroup,
   GlamInk,
 } from './types.js';
+export { getImage, peekImage, clearImageCache, fitBox } from './gl/image.js';
+export type { ImageRecord, ImageState, ImageFit } from './gl/image.js';
 export { traceMatch } from './trace.js';
 export type { TraceResult } from './trace.js';
 export { glamSchema, parseDoc } from './schema.js';

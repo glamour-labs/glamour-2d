@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { GlamDoc } from './types.js';
 
-const nodeTypeSchema = z.enum(['circle', 'rect', 'text', 'ellipse', 'arc', 'stroke']);
+const nodeTypeSchema = z.enum(['circle', 'rect', 'text', 'ellipse', 'arc', 'stroke', 'image']);
 
 const gradientSchema = z.object({
   type: z.enum(['linear', 'radial']),
@@ -34,6 +34,25 @@ const nodeSchema = z.object({
   closed: z.boolean().optional(),
   dash: z.array(z.number()).optional(),
   text: z.string().optional(),
+  /**
+   * Image source (`image` nodes). A URL or a data: URI — it is handed to an
+   * `Image`, so anything the browser can decode works, and it is loaded
+   * asynchronously: a node whose source has not arrived draws nothing yet.
+   */
+  src: z.string().optional(),
+  /**
+   * How the picture fills the node's own geometry. `cover` crops the overflow
+   * against the node's shape, `contain` fits the whole picture inside it, and
+   * `fill` stretches. Defaults to `cover`.
+   */
+  fit: z.enum(['cover', 'contain', 'fill']).optional(),
+  /**
+   * End shape of an `arc` band. `butt` (the default, and what every existing
+   * document gets) leaves the square ends the band has always had; `round`
+   * caps each end with a disc so the band tapers, which is what a highlight or
+   * a progress sweep usually wants.
+   */
+  cap: z.enum(['butt', 'round']).optional(),
   size: z.number().optional(),
   fontStyle: z.string().optional(),
   fill: z.string().optional(),

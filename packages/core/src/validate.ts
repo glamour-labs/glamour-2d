@@ -26,10 +26,15 @@ const PROPS_BY_TYPE: Record<NodeType, string[]> = {
   rect: [...COMMON_PROPS, 'w', 'h', 'cornerRadius'],
   text: [...COMMON_PROPS, 'text', 'size', 'fontStyle'],
   ellipse: [...COMMON_PROPS, 'rx', 'ry'],
-  arc: [...COMMON_PROPS, 'innerRadius', 'outerRadius', 'angle'],
+  arc: [...COMMON_PROPS, 'innerRadius', 'outerRadius', 'angle', 'cap'],
   // stroke's `points` are inked/drawn, not bound/set — only the common
   // transform + paint props are animatable on it.
   stroke: [...COMMON_PROPS],
+  // An image carries whichever shape props it was given — that shape is also
+  // its crop — plus its own source and fit. `src` and `fit` are listed so a
+  // host may swap them at runtime, which is the point of the node: one document
+  // can show a different picture in every slot.
+  image: [...COMMON_PROPS, 'r', 'rx', 'ry', 'w', 'h', 'cornerRadius', 'src', 'fit'],
 };
 
 const ALLOWED_POINTER_EVENTS = new Set(['click', 'hover', 'leave']);
