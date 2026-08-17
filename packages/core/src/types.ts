@@ -169,6 +169,12 @@ export interface GlamGuided {
 export interface GlamDoc {
   schema: 'glamour/v0' | 'glamour/v0.1';
   canvas: { w: number; h: number; bg?: string };
+  /**
+   * Default text family for every text node that does not name its own. The
+   * page must provide the face (self-hosted or system); the document only names
+   * it. Omitted falls back to the renderer's last-resort family.
+   */
+  fontFamily?: string;
   inputs?: Record<string, number | string>;
   nodes: GlamNode[];
   bind?: GlamBind[];

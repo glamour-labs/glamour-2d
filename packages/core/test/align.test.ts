@@ -181,3 +181,40 @@ test('centring still holds when the family is overridden', () => {
   expect(Math.abs(inkSpan(scene).centre - 200)).toBeLessThan(4);
   scene.destroy();
 });
+
+test('a document-level fontFamily applies without repeating it on every node', () => {
+  const withDoc: GlamDoc = {
+    schema: 'glamour/v0.1',
+    canvas: { w: W, h: H, bg: '#ffffff' },
+    fontFamily: 'Times New Roman',
+    nodes: [{ ...BASE, id: 't', x: 20, text: 'MMM' }],
+  };
+  const a = buildScene(withDoc);
+  a.layer.draw();
+  const wa = inkSpan(a).max - inkSpan(a).min;
+  a.destroy();
+
+  // Same nodes, no document default -> the last-resort family instead.
+  const b = drawn([{ ...BASE, id: 't', x: 20, text: 'MMM' }]);
+  const wb = inkSpan(b).max - inkSpan(b).min;
+  b.destroy();
+  expect(Math.abs(wa - wb)).toBeGreaterThan(2);
+});
+
+test('a node fontFamily beats the document default', () => {
+  const mk = (nodeFamily?: string) => {
+    const d: GlamDoc = {
+      schema: 'glamour/v0.1',
+      canvas: { w: W, h: H, bg: '#ffffff' },
+      fontFamily: 'Times New Roman',
+      nodes: [{ ...BASE, id: 't', x: 20, text: 'MMM', ...(nodeFamily ? { fontFamily: nodeFamily } : {}) }],
+    };
+    const s = buildScene(d);
+    s.layer.draw();
+    const w = inkSpan(s).max - inkSpan(s).min;
+    s.destroy();
+    return w;
+  };
+  // Overriding back to the last-resort family must differ from the doc default.
+  expect(Math.abs(mk('Arial') - mk())).toBeGreaterThan(2);
+});

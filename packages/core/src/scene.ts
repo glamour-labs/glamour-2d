@@ -430,11 +430,18 @@ function num(v: PropValue, fallback = 0): number {
 }
 
 /**
- * The implicit text family. The `.glam` format has no `fontFamily` field, so v1
- * inherited Konva.Text's default of bare 'Arial'. Kept as exactly that (no
- * fallback list) so the two backends resolve the same family name — a fallback
- * chain let Chromium and node-canvas pick different fonts, which showed up as a
- * width mismatch on text-heavy docs in the parity run.
+ * LAST-RESORT family, for a document that names none.
+ *
+ * There are three levels, and this is the bottom one: a text node's own
+ * `fontFamily`, else the document's `fontFamily`, else this. The renderer
+ * deliberately knows about no other typeface — a product has many fonts and its
+ * documents should say which they want, rather than the library shipping a new
+ * version every time one is added.
+ *
+ * Kept as bare 'Arial' (not a fallback list) so the two backends resolve the
+ * same family name; a fallback chain let Chromium and node-canvas pick
+ * different fonts, which showed up as a width mismatch on text-heavy docs in
+ * the parity run.
  */
 const DEFAULT_FONT_FAMILY = 'Arial';
 
@@ -684,6 +691,8 @@ class SceneCore {
   private destroyed = false;
   private ownsCanvas = false;
   private hoverNode: NodeHandle | null = null;
+  /** Document-level text family; a node's own `fontFamily` beats it. */
+  defaultFontFamily: string = DEFAULT_FONT_FAMILY;
 
   constructor(
     readonly doc: GlamDoc,
@@ -1379,6 +1388,8 @@ export function buildScene(doc: GlamDoc, container?: unknown, opts: BuildSceneOp
     groupById[group.id] = g;
   }
 
+  core.defaultFontFamily = doc.fontFamily ?? DEFAULT_FONT_FAMILY;
+
   const ungrouped: NodeHandle[] = [];
   for (const node of doc.nodes) {
     const h = buildNodeHandle(node, core);
@@ -1536,7 +1547,8 @@ function buildNodeHandle(node: GlamNode, core: SceneCore): NodeHandle {
       p.text = node.text ?? '';
       p.fontSize = node.size ?? 16;
       p.fontStyle = normalizeFontStyle(node.fontStyle ?? 'normal');
-      p.fontFamily = node.fontFamily ?? DEFAULT_FONT_FAMILY;
+      // node > document > last resort.
+      p.fontFamily = node.fontFamily ?? core.defaultFontFamily;
       // Defaults are the pen origin, which is what every document written
       // before these existed already assumes.
       p.align = node.align ?? 'left';

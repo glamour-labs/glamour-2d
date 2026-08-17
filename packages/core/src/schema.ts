@@ -180,6 +180,12 @@ export const glamSchema: z.ZodType<GlamDoc> = z.object({
     h: z.number(),
     bg: z.string().optional(),
   }),
+  /**
+   * Default text family for the whole document; any text node may still name
+   * its own. The renderer holds no font list — a product has many typefaces and
+   * naming them belongs in its documents, not in a library release.
+   */
+  fontFamily: z.string().optional(),
   inputs: z.record(z.union([z.number(), z.string()])).optional(),
   nodes: z.array(nodeSchema),
   bind: z.array(bindSchema).optional(),
