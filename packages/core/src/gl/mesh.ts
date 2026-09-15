@@ -170,6 +170,21 @@ export class Mesh {
     }
   }
 
+  /**
+   * Axis-aligned bounds of everything accumulated, unpadded. Taken once when a
+   * mesh is cached, so the per-frame path never walks the vertices again.
+   */
+  bounds(): { x0: number; y0: number; x1: number; y1: number } {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let i = 0; i < this.v.length; i += 2) {
+      if (this.v[i] < x0) x0 = this.v[i];
+      if (this.v[i] > x1) x1 = this.v[i];
+      if (this.v[i + 1] < y0) y0 = this.v[i + 1];
+      if (this.v[i + 1] > y1) y1 = this.v[i + 1];
+    }
+    return { x0, y0, x1, y1 };
+  }
+
   /** Apply a rotation (degrees) about (ox, oy) to vertices added since `from`. */
   rotateFrom(from: number, ox: number, oy: number, deg: number): void {
     if (!deg) return;

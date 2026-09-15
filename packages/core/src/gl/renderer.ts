@@ -18,7 +18,6 @@
  * separable Gaussian over it before compositing underneath the node.
  */
 
-import { Mesh } from './mesh.js';
 
 export interface Rgba {
   r: number;
@@ -60,15 +59,35 @@ export type Paint =
       rot: number;
     };
 
+/** Where a cached local-space mesh gets placed. `rot` is degrees, as in the doc. */
+export interface Xform {
+  x: number;
+  y: number;
+  rot: number;
+}
+
+/** No placement — what the full-canvas quads (shading, blur, tint) pass. */
+const IDENTITY: Xform = { x: 0, y: 0, rot: 0 };
+
 const MAX_STOPS = 8;
 
+/**
+ * `u_xf` is (dx, dy, rotation-in-radians) applied about the mesh origin. Node
+ * geometry is tessellated ONCE in local space and cached; placing it is this
+ * uniform, not a CPU rewrite of every vertex. Identity is (0,0,0), which is
+ * what the full-canvas quads (shading, blur, tint) pass.
+ */
 const VS_QUAD = `#version 300 es
 in vec2 a_pos;
 uniform vec2 u_res;
+uniform vec3 u_xf;
 out vec2 v_px;
 void main() {
-  v_px = a_pos;
-  vec2 clip = (a_pos / u_res) * 2.0 - 1.0;
+  float c = cos(u_xf.z);
+  float s = sin(u_xf.z);
+  vec2 p = vec2(a_pos.x * c - a_pos.y * s, a_pos.x * s + a_pos.y * c) + u_xf.xy;
+  v_px = p;
+  vec2 clip = (p / u_res) * 2.0 - 1.0;
   gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
 }`;
 
@@ -228,7 +247,6 @@ export class GlRenderer {
   private tint!: Program;
   private vao!: WebGLVertexArrayObject;
   private buf!: WebGLBuffer;
-  private mesh = new Mesh();
   private texCache = new Map<string, WebGLTexture>();
   private fbo: { fb: WebGLFramebuffer; tex: WebGLTexture } | null = null;
   private fboB: { fb: WebGLFramebuffer; tex: WebGLTexture } | null = null;
@@ -276,15 +294,15 @@ export class GlRenderer {
    */
   private initGpu(): void {
     const gl = this.gl;
-    this.solid = this.program(VS_QUAD, FS_SOLID, ['u_res', 'u_color']);
+    this.solid = this.program(VS_QUAD, FS_SOLID, ['u_res', 'u_xf', 'u_color']);
     this.gradient = this.program(VS_QUAD, FS_GRADIENT, [
-      'u_res', 'u_kind', 'u_from', 'u_to', 'u_r0', 'u_r1', 'u_nstops', 'u_alpha',
+      'u_res', 'u_xf', 'u_kind', 'u_from', 'u_to', 'u_r0', 'u_r1', 'u_nstops', 'u_alpha',
       ...Array.from({ length: MAX_STOPS }, (_, i) => `u_offsets[${i}]`),
       ...Array.from({ length: MAX_STOPS }, (_, i) => `u_colors[${i}]`),
     ]);
-    this.texture = this.program(VS_QUAD, FS_TEXTURE, ['u_res', 'u_tex', 'u_box', 'u_origin', 'u_rot', 'u_alpha']);
-    this.blur = this.program(VS_QUAD, FS_BLUR, ['u_res', 'u_tex', 'u_texel', 'u_dir', 'u_radius']);
-    this.tint = this.program(VS_QUAD, FS_TINT, ['u_res', 'u_tex', 'u_color', 'u_offset']);
+    this.texture = this.program(VS_QUAD, FS_TEXTURE, ['u_res', 'u_xf', 'u_tex', 'u_box', 'u_origin', 'u_rot', 'u_alpha']);
+    this.blur = this.program(VS_QUAD, FS_BLUR, ['u_res', 'u_xf', 'u_tex', 'u_texel', 'u_dir', 'u_radius']);
+    this.tint = this.program(VS_QUAD, FS_TINT, ['u_res', 'u_xf', 'u_tex', 'u_color', 'u_offset']);
 
     const vao = gl.createVertexArray();
     const buf = gl.createBuffer();
@@ -418,37 +436,35 @@ export class GlRenderer {
    * pixels), then the paint is shaded through the resulting stencil mask.
    */
   drawNode(
-    build: (m: Mesh) => void,
+    verts: Float32Array,
+    localBox: Box,
+    xf: Xform,
     paint: Paint,
     alpha: number,
     shadow?: ShadowPaint,
   ): void {
-    if (alpha <= 0 || this.isContextLost) return;
-    this.mesh.clear();
-    build(this.mesh);
-    if (this.mesh.count === 0) return;
-    const verts = new Float32Array(this.mesh.v);
+    if (alpha <= 0 || this.isContextLost || verts.length === 0) return;
 
     if (shadow && shadow.blur > 0 && shadow.color.a > 0) {
-      this.drawGlow(verts, shadow);
+      this.drawGlow(verts, xf, shadow);
     }
 
     const gl = this.gl;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    this.stencilFrom(verts);
-    this.shadeThroughStencil(paint, alpha, bounds(this.mesh.v));
-    this.clearStencil(verts);
+    this.stencilFrom(verts, xf);
+    this.shadeThroughStencil(paint, alpha, transformBox(localBox, xf));
+    this.clearStencil(verts, xf);
   }
 
   /** Mark the mesh's coverage in the stencil buffer. */
-  private stencilFrom(verts: Float32Array): void {
+  private stencilFrom(verts: Float32Array, xf: Xform): void {
     const gl = this.gl;
     gl.enable(gl.STENCIL_TEST);
     gl.colorMask(false, false, false, false);
     gl.stencilFunc(gl.ALWAYS, 1, 0xff);
     gl.stencilOp(gl.REPLACE, gl.REPLACE, gl.REPLACE);
     gl.stencilMask(0xff);
-    this.rawDraw(this.solid, verts, () => {
+    this.rawDraw(this.solid, verts, xf, () => {
       gl.uniform4f(this.solid.u.u_color!, 0, 0, 0, 0);
     });
     gl.colorMask(true, true, true, true);
@@ -457,12 +473,12 @@ export class GlRenderer {
   }
 
   /** Reset only the region this node touched, so the next node starts clean. */
-  private clearStencil(verts: Float32Array): void {
+  private clearStencil(verts: Float32Array, xf: Xform): void {
     const gl = this.gl;
     gl.colorMask(false, false, false, false);
     gl.stencilFunc(gl.ALWAYS, 0, 0xff);
     gl.stencilOp(gl.REPLACE, gl.REPLACE, gl.REPLACE);
-    this.rawDraw(this.solid, verts, () => {
+    this.rawDraw(this.solid, verts, xf, () => {
       gl.uniform4f(this.solid.u.u_color!, 0, 0, 0, 0);
     });
     gl.colorMask(true, true, true, true);
@@ -473,7 +489,7 @@ export class GlRenderer {
     const gl = this.gl;
     const quad = quadVerts(box);
     if (paint.kind === 'solid') {
-      this.rawDraw(this.solid, quad, () => {
+      this.rawDraw(this.solid, quad, IDENTITY, () => {
         const c = paint.color;
         gl.uniform4f(this.solid.u.u_color!, c.r, c.g, c.b, c.a * alpha);
       });
@@ -481,7 +497,7 @@ export class GlRenderer {
     }
     if (paint.kind === 'gradient') {
       const g = paint.gradient;
-      this.rawDraw(this.gradient, quad, () => {
+      this.rawDraw(this.gradient, quad, IDENTITY, () => {
         const u = this.gradient.u;
         gl.uniform1i(u.u_kind!, g.kind === 'linear' ? 0 : 1);
         gl.uniform2f(u.u_from!, g.from[0], g.from[1]);
@@ -500,7 +516,7 @@ export class GlRenderer {
       return;
     }
     const tex = this.uploadTexture(paint.source);
-    this.rawDraw(this.texture, quad, () => {
+    this.rawDraw(this.texture, quad, IDENTITY, () => {
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.uniform1i(this.texture.u.u_tex!, 0);
@@ -514,7 +530,7 @@ export class GlRenderer {
   /**
    * Glow: silhouette → offscreen, blur X, blur Y, tint, composite at the offset.
    */
-  private drawGlow(verts: Float32Array, shadow: ShadowPaint): void {
+  private drawGlow(verts: Float32Array, xf: Xform, shadow: ShadowPaint): void {
     const gl = this.gl;
     const a = this.ensureFbo('a');
     const b = this.ensureFbo('b');
@@ -527,7 +543,7 @@ export class GlRenderer {
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.disable(gl.BLEND);
-    this.rawDraw(this.solid, verts, () => {
+    this.rawDraw(this.solid, verts, xf, () => {
       gl.uniform4f(this.solid.u.u_color!, 1, 1, 1, 1);
     });
 
@@ -538,7 +554,7 @@ export class GlRenderer {
       gl.viewport(0, 0, W, H);
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
-      this.rawDraw(this.blur, full, () => {
+      this.rawDraw(this.blur, full, IDENTITY, () => {
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, src);
         gl.uniform1i(this.blur.u.u_tex!, 0);
@@ -555,7 +571,7 @@ export class GlRenderer {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, W, H);
     gl.enable(gl.BLEND);
-    this.rawDraw(this.tint, full, () => {
+    this.rawDraw(this.tint, full, IDENTITY, () => {
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, a.tex);
       gl.uniform1i(this.tint.u.u_tex!, 0);
@@ -608,7 +624,7 @@ export class GlRenderer {
     return tex;
   }
 
-  private rawDraw(prog: Program, verts: Float32Array, setUniforms: () => void): void {
+  private rawDraw(prog: Program, verts: Float32Array, xf: Xform, setUniforms: () => void): void {
     const gl = this.gl;
     gl.useProgram(prog.p);
     gl.bindVertexArray(this.vao);
@@ -616,6 +632,7 @@ export class GlRenderer {
     gl.bufferData(gl.ARRAY_BUFFER, verts, gl.DYNAMIC_DRAW);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     gl.uniform2f(prog.u.u_res!, this.width, this.height);
+    gl.uniform3f(prog.u.u_xf!, xf.x, xf.y, (xf.rot * Math.PI) / 180);
     setUniforms();
     gl.drawArrays(gl.TRIANGLES, 0, verts.length / 2);
   }
@@ -670,7 +687,7 @@ export class GlRenderer {
   }
 }
 
-interface Box {
+export interface Box {
   x0: number;
   y0: number;
   x1: number;
@@ -678,15 +695,32 @@ interface Box {
 }
 
 /** Bounding box of a flat vertex array, padded so the AA fringe is inside. */
-function bounds(v: readonly number[]): Box {
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (let i = 0; i < v.length; i += 2) {
-    if (v[i] < x0) x0 = v[i];
-    if (v[i] > x1) x1 = v[i];
-    if (v[i + 1] < y0) y0 = v[i + 1];
-    if (v[i + 1] > y1) y1 = v[i + 1];
-  }
+/**
+ * The node's cached LOCAL bounds, placed by `xf` — four corners instead of a
+ * walk over every vertex, which is the whole point of caching the mesh. The 2px
+ * pad covers the antialiased edge the stencil pass leaves outside the geometry.
+ */
+function transformBox(b: Box, xf: Xform): Box {
   const pad = 2;
+  if (!xf.rot) {
+    return {
+      x0: b.x0 + xf.x - pad, y0: b.y0 + xf.y - pad,
+      x1: b.x1 + xf.x + pad, y1: b.y1 + xf.y + pad,
+    };
+  }
+  const a = (xf.rot * Math.PI) / 180;
+  const ca = Math.cos(a), sa = Math.sin(a);
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const px of [b.x0, b.x1]) {
+    for (const py of [b.y0, b.y1]) {
+      const qx = px * ca - py * sa + xf.x;
+      const qy = px * sa + py * ca + xf.y;
+      if (qx < x0) x0 = qx;
+      if (qx > x1) x1 = qx;
+      if (qy < y0) y0 = qy;
+      if (qy > y1) y1 = qy;
+    }
+  }
   return { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad };
 }
 
