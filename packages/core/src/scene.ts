@@ -1,6 +1,6 @@
 import { evalExpr } from './expr.js';
 import type { GlamDoc, GlamNode } from './types.js';
-import { GlRenderer, parseColor, type Paint, type Rgba, type ShadowPaint } from './gl/renderer.js';
+import { GlRenderer, parseColor, type Box, type Paint, type Rgba, type ShadowPaint, type Xform } from './gl/renderer.js';
 import { Mesh, dashify, tensionize, arcLengths, segsFor } from './gl/mesh.js';
 import { ensureFont, measureText, rasterizeText, textKey, type TextRaster } from './gl/text.js';
 import { getImage, fitBox, type ImageFit } from './gl/image.js';
@@ -138,6 +138,28 @@ const ARC_ACCESSORS = ['cap'] as const;
 /** Text-only accessors, so a host can re-align a label at runtime. */
 const TEXT_ACCESSORS = ['align', 'valign', 'fontFamily'] as const;
 
+/**
+ * Props whose write invalidates a node's cached LOCAL mesh.
+ *
+ * Everything omitted is either placement (`x`, `y`, `rotation` — now a shader
+ * uniform), paint (`stroke`, `opacity`, the shadow family) or non-visual. `fill`
+ * IS here because a closed `stroke` node with a fill tessellates as a filled
+ * polygon and without one as a stroked polyline — two different meshes.
+ */
+const GEOM_PROPS: ReadonlySet<string> = new Set([
+  'radius', 'width', 'height', 'radiusX', 'radiusY',
+  'innerRadius', 'outerRadius', 'angle', 'cornerRadius', 'cap',
+  'points', 'dash', 'tension', 'closed', 'strokeWidth', 'fill',
+  'text', 'fontSize', 'fontStyle', 'fontFamily', 'align', 'valign',
+]);
+
+/** A tessellated local-space mesh, held until its node's geometry changes. */
+interface MeshCache {
+  v: number;
+  verts: Float32Array;
+  box: Box;
+}
+
 /** Konva class names, kept so type-assertion tests stay meaningful. */
 const CLASS_NAMES: Record<string, string> = {
   circle: 'Circle',
@@ -171,6 +193,19 @@ export class NodeHandle {
   private lastRasterSize = -1;
   private listeners = new Map<string, Array<(e?: unknown) => void>>();
 
+  /**
+   * Bumped whenever a prop that changes the node's LOCAL shape is written, so a
+   * cached mesh can be validated with one integer compare. Position, rotation,
+   * colour and opacity deliberately do NOT bump it — placement is a uniform now
+   * (see gl/renderer.ts `u_xf`), and a moving node must keep its cached mesh or
+   * the cache buys nothing on exactly the scenes that need it.
+   */
+  geomVersion = 0;
+  /** Cached local-space fill mesh, valid while `v === geomVersion`. */
+  geomCache: MeshCache | null = null;
+  /** Cached local-space outline mesh (the second, stroke pass). */
+  outlineCache: MeshCache | null = null;
+
   constructor(kind: GlamNode['type'] | 'group', scene: SceneCore | null) {
     this.kind = kind;
     this.scene = scene;
@@ -191,6 +226,7 @@ export class NodeHandle {
         if (name === 'text' || name === 'fontStyle' || name === 'fontFamily' || name === 'fill') {
           this.raster = null;
         }
+        if (GEOM_PROPS.has(name)) this.geomVersion++;
         this.scene?.markDirty();
         return this;
       };
@@ -776,23 +812,52 @@ class SceneCore {
     if (alpha <= 0) return;
     const abs = node.getAbsolutePosition();
     const rot = num(node.props.rotation);
+    const xf: Xform = { x: abs.x, y: abs.y, rot };
     const shadow = this.shadowFor(node);
     const paint = this.paintFor(node, abs, rot);
     if (paint) {
-      r.drawNode((m) => this.buildGeometry(m, node, abs, rot), paint, alpha, shadow);
+      const g = this.cachedMesh(node, false);
+      if (g) r.drawNode(g.verts, g.box, xf, paint, alpha, shadow);
     }
     // Konva painted fill AND stroke on the same shape. Missing this dropped the
     // outline ring off every stroked circle/rect (caught by the crab's eyes in
     // the first parity run), so a stroked shape gets a second outline pass.
     const outline = this.outlinePaint(node);
     if (outline) {
-      r.drawNode(
-        (m) => this.buildOutline(m, node, abs, rot),
-        outline.paint,
-        alpha,
-        paint ? undefined : shadow,
-      );
+      const o = this.cachedMesh(node, true);
+      if (o) r.drawNode(o.verts, o.box, xf, outline.paint, alpha, paint ? undefined : shadow);
     }
+  }
+
+  /**
+   * The node's local-space mesh, tessellated on first use and kept until a
+   * geometry prop is written. This is the whole performance change: a scene of
+   * 300 shapes that merely MOVE used to re-tessellate all of them every frame
+   * (measured at ~50% of frame time, and ~500 throwaway Float32Arrays per frame
+   * on the Vocab Kid word scenes).
+   *
+   * Text is deliberately never cached: its mesh is one rectangle sized from the
+   * glyph raster, which the raster ladder can swap asynchronously when a font
+   * finishes loading — a stale rect would clip the glyph, and rebuilding two
+   * triangles costs nothing.
+   */
+  private cachedMesh(node: NodeHandle, outline: boolean): MeshCache | null {
+    if (node.kind === 'text' && !outline) return this.buildMeshNow(node, outline);
+    const slot = outline ? node.outlineCache : node.geomCache;
+    if (slot && slot.v === node.geomVersion) return slot;
+    const built = this.buildMeshNow(node, outline);
+    if (outline) node.outlineCache = built;
+    else node.geomCache = built;
+    return built;
+  }
+
+  private buildMeshNow(node: NodeHandle, outline: boolean): MeshCache | null {
+    const m = this.mesh;
+    m.clear();
+    if (outline) this.buildOutline(m, node);
+    else this.buildGeometry(m, node);
+    if (m.count === 0) return null;
+    return { v: node.geomVersion, verts: new Float32Array(m.v), box: m.bounds() };
   }
 
   /**
@@ -818,13 +883,10 @@ class SceneCore {
   }
 
   /** Tessellate a shape's outline as a closed stroked polyline. */
-  private buildOutline(m: Mesh, node: NodeHandle, abs: { x: number; y: number }, rot: number): void {
-    const from = m.v.length;
+  private buildOutline(m: Mesh, node: NodeHandle): void {
     const width = num(node.props.strokeWidth, 1);
     const pts = outlinePoints(node);
     if (pts.length >= 4) m.polyline(pts, width, true);
-    m.rotateFrom(from, 0, 0, rot);
-    m.translateFrom(from, abs.x, abs.y);
   }
 
   private inheritedAlpha(node: NodeHandle): number {
@@ -837,9 +899,8 @@ class SceneCore {
     return a;
   }
 
-  /** Tessellate one node in absolute canvas pixels. */
-  private buildGeometry(m: Mesh, node: NodeHandle, abs: { x: number; y: number }, rot: number): void {
-    const from = m.v.length;
+  /** Tessellate one node in LOCAL pixels, origin-centred. Placement is `u_xf`. */
+  private buildGeometry(m: Mesh, node: NodeHandle): void {
     switch (node.kind) {
       case 'circle':
         m.circle(0, 0, num(node.props.radius));
@@ -912,8 +973,6 @@ class SceneCore {
       default:
         return;
     }
-    m.rotateFrom(from, 0, 0, rot);
-    m.translateFrom(from, abs.x, abs.y);
   }
 
   private paintFor(node: NodeHandle, abs: { x: number; y: number }, rot = 0): Paint | null {

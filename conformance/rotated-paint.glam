@@ -1,0 +1,155 @@
+{
+  "schema": "glamour/v0.1",
+  "canvas": {
+    "w": 520,
+    "h": 420,
+    "bg": "#101418"
+  },
+  "nodes": [
+    {
+      "id": "rotLinGrad",
+      "type": "rect",
+      "x": 100,
+      "y": 70,
+      "w": 140,
+      "h": 70,
+      "rotation": 37,
+      "fill": "#000000",
+      "fillGradient": {
+        "type": "linear",
+        "from": {
+          "x": 0,
+          "y": 0
+        },
+        "to": {
+          "x": 140,
+          "y": 0
+        },
+        "stops": [
+          {
+            "offset": 0,
+            "color": "#4c7dff"
+          },
+          {
+            "offset": 1,
+            "color": "#5ad67d"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rotRadGrad",
+      "type": "circle",
+      "x": 370,
+      "y": 90,
+      "r": 55,
+      "rotation": 53,
+      "fill": "#000000",
+      "fillGradient": {
+        "type": "radial",
+        "center": {
+          "x": -20,
+          "y": -14
+        },
+        "startRadius": 0,
+        "endRadius": 55,
+        "stops": [
+          {
+            "offset": 0,
+            "color": "#ffffff"
+          },
+          {
+            "offset": 1,
+            "color": "#0b2a6b"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rotGlow",
+      "type": "rect",
+      "x": 390,
+      "y": 250,
+      "w": 90,
+      "h": 60,
+      "rotation": 22,
+      "fill": "#ff9f43",
+      "shadowColor": "#ff2d55",
+      "shadowBlur": 18,
+      "shadowOpacity": 0.9,
+      "shadowOffsetX": 6,
+      "shadowOffsetY": 8
+    },
+    {
+      "id": "rotArc",
+      "type": "arc",
+      "x": 60,
+      "y": 380,
+      "innerRadius": 14,
+      "outerRadius": 34,
+      "angle": 210,
+      "rotation": 64,
+      "fill": "#33ffff",
+      "cap": "round"
+    },
+    {
+      "id": "rotStroke",
+      "type": "stroke",
+      "x": 170,
+      "y": 385,
+      "rotation": 17,
+      "points": [
+        0,
+        0,
+        40,
+        -26,
+        80,
+        14,
+        120,
+        -18
+      ],
+      "tension": 0.5,
+      "stroke": "#5ad67d",
+      "strokeWidth": 7
+    },
+    {
+      "id": "rotStrokedCirc",
+      "type": "circle",
+      "x": 330,
+      "y": 375,
+      "r": 26,
+      "rotation": 45,
+      "fill": "#4c7dff",
+      "stroke": "#ffffff",
+      "strokeWidth": 5
+    },
+    {
+      "id": "rotText",
+      "type": "text",
+      "x": 400,
+      "y": 380,
+      "text": "Rot",
+      "size": 26,
+      "rotation": -33,
+      "fill": "#ffffff"
+    },
+    {
+      "id": "rotInGroup",
+      "type": "rect",
+      "x": 20,
+      "y": 20,
+      "w": 46,
+      "h": 30,
+      "rotation": 15,
+      "fill": "#d92b2b",
+      "group": "g1"
+    }
+  ],
+  "groups": [
+    {
+      "id": "g1",
+      "x": 40,
+      "y": 140
+    }
+  ]
+}
