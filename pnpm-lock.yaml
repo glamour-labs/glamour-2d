@@ -229,7 +229,7 @@ importers:
         specifier: ^0.1.2
         version: link:../core
       '@glamour-labs/player':
-        specifier: ^0.1.2
+        specifier: ^0.1.4
         version: link:../player
     devDependencies:
       '@testing-library/react':
