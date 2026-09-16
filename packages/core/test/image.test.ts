@@ -199,3 +199,23 @@ test('an ANIMATING text node reuses one bitmap across a size sweep', () => {
   }
   scene.destroy();
 });
+
+test('a still document paints the picture on its own, with no second draw', async () => {
+  const doc: GlamDoc = {
+    schema: 'glamour/v0.1',
+    canvas: { w: 120, h: 120, bg: '#ffffff' },
+    nodes: [{ id: 'pic', type: 'image', x: 60, y: 60, r: 40, src: RED_BLUE_2x1, fit: 'fill' }],
+  };
+  const scene = buildScene(doc);
+
+  // The ONLY draw this test ever asks for. No tween keeps a loop alive here, so
+  // if the loader's dirty mark does not schedule its own frame the picture is
+  // never painted — which is exactly the bug this guards.
+  scene.layer.draw();
+  await settled(RED_BLUE_2x1);
+  for (let i = 0; i < 5; i++) await new Promise((r) => requestAnimationFrame(() => r(null)));
+
+  const left = pixelAt(scene, 40, 60);
+  expect(left[0]).toBeGreaterThan(180);
+  expect(left[2]).toBeLessThan(80);
+});

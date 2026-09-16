@@ -792,6 +792,7 @@ class SceneCore {
 
   markDirty(): void {
     this.dirty = true;
+    this.startTicker();
   }
 
   /* ------------------------------- drawing -------------------------------- */
@@ -1208,6 +1209,11 @@ class SceneCore {
     this.startTicker();
   }
 
+  /**
+   * Ask for a frame. Drives tweens AND plain repaints: a still document that
+   * marked itself dirty (an image or font that landed late) has no tween to
+   * keep a loop alive, so without this it would never paint again.
+   */
   private startTicker(): void {
     if (this.raf !== null || this.destroyed) return;
     if (typeof requestAnimationFrame !== 'function') {
@@ -1220,7 +1226,7 @@ class SceneCore {
       if (this.destroyed) return;
       const live = this.tickTweens(now());
       this.draw();
-      if (live) this.raf = requestAnimationFrame(step);
+      if (live || this.dirty) this.raf = requestAnimationFrame(step);
     };
     this.raf = requestAnimationFrame(step);
   }
