@@ -41,6 +41,7 @@ export {
   applyEaseForTest,
 } from './scene.js';
 export type { SceneHandle, GlamNodeHandle, NodeHandle, BuildSceneOpts } from './scene.js';
+export { MSAA_PIXEL_BUDGET } from './gl/renderer.js';
 // NOTE: `renderToPNG` is no longer exported from core. The WebGL backend has no
 // in-process rasterizer, so headless render lives in `@glamour-labs/player/node`, which
 // drives a real browser. See docs/V2-RENDERER.md.
