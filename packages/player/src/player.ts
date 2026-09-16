@@ -160,6 +160,13 @@ export interface RenderGlamourOpts {
    * backing store is sixteen times the pixels of a 1x one.
    */
   dpr?: number;
+  /**
+   * Multisample the drawing buffer. Unset lets the renderer decide from the
+   * buffer's own size — see `MSAA_PIXEL_BUDGET` in core. Pass `false` for a
+   * large, fast-moving scene that would rather hold 60 fps than soften its
+   * edges.
+   */
+  antialias?: boolean;
 }
 
 /** Node pointer event name -> the doc-facing event name (wired set only). */
@@ -179,7 +186,7 @@ export function renderGlamour(
     3,
     Math.max(1, opts.dpr ?? (typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1)),
   );
-  const scene = buildScene(doc, mount, { dpr });
+  const scene = buildScene(doc, mount, { dpr, antialias: opts.antialias });
   const inputs: Record<string, number | string> = { ...(doc.inputs ?? {}) };
 
   let actor: Actor<AnyStateMachine> | null = null;

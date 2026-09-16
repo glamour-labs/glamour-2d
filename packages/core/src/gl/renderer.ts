@@ -226,13 +226,42 @@ interface Program {
   u: Record<string, WebGLUniformLocation | null>;
 }
 
-const CONTEXT_ATTRS: WebGLContextAttributes = {
-  antialias: true,
-  alpha: true,
-  premultipliedAlpha: true,
-  stencil: true,
-  preserveDrawingBuffer: true,
-};
+/**
+ * Multisampling is the ONLY antialiasing this backend has — every node is drawn
+ * through a binary stencil mask (see this file's header), so with it off the
+ * silhouettes are hard-edged.
+ *
+ * It is also, on an integrated GPU, the largest single cost in a frame, and the
+ * bill is per drawing-buffer PIXEL rather than per node. Measured in Chrome on
+ * an Intel UHD 630 against a 326-node scene, median frame time over 60 frames:
+ *
+ *   multisampled, 3.5 Mpx    45-49 ms
+ *   multisampled, 1.97 Mpx   17.4 ms   (still dropping frames)
+ *   multisampled, 1.37 Mpx   16.7 ms
+ *   not multisampled, 3.5 Mpx 16.7 ms
+ *
+ * Cutting that scene from 326 nodes to ONE barely moved any of them, and
+ * `gl.finish()` put the real GPU work at 0.1 ms. The resolve of the multisample
+ * buffer is the bill, not the drawing.
+ *
+ * `MSAA_PIXEL_BUDGET` is where the trade flips, and the two sides of it want
+ * opposite things for the same reason: a small buffer means large device
+ * pixels, where a stair-stepped edge is plainly visible and the resolve is
+ * cheap; a large buffer means small device pixels, where the same edge is hard
+ * to see and the resolve is what breaks the frame. One threshold serves both,
+ * and a caller who disagrees for their own document passes `antialias`.
+ */
+export const MSAA_PIXEL_BUDGET = 1_500_000;
+
+function contextAttrs(antialias: boolean): WebGLContextAttributes {
+  return {
+    antialias,
+    alpha: true,
+    premultipliedAlpha: true,
+    stencil: true,
+    preserveDrawingBuffer: true,
+  };
+}
 
 export class GlRenderer {
   gl: WebGL2RenderingContext;
@@ -267,22 +296,31 @@ export class GlRenderer {
 
   private detachHandlers: Array<() => void> = [];
 
+  /** Whether this context was actually created multisampled. */
+  readonly antialias: boolean;
+
   constructor(
     readonly canvas: HTMLCanvasElement | OffscreenCanvas,
     width: number,
     height: number,
     dpr = 1,
+    antialias?: boolean,
   ) {
     this.width = width;
     this.height = height;
     this.dpr = dpr;
+    this.antialias =
+      antialias ?? Math.round(width * dpr) * Math.round(height * dpr) <= MSAA_PIXEL_BUDGET;
     this.gl = this.acquireContext();
     this.initGpu();
     this.attachContextHandlers();
   }
 
   private acquireContext(): WebGL2RenderingContext {
-    const gl = this.canvas.getContext('webgl2', CONTEXT_ATTRS) as WebGL2RenderingContext | null;
+    const gl = this.canvas.getContext(
+      'webgl2',
+      contextAttrs(this.antialias),
+    ) as WebGL2RenderingContext | null;
     if (!gl) throw new Error('GlRenderer: WebGL2 unavailable');
     return gl;
   }

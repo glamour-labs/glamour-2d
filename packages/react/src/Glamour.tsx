@@ -64,12 +64,25 @@ export interface GlamourProps {
    * (`onStroke` reports raw ink at pen-up, and a guided doc has none).
    */
   onGuided?: (e: GlamGuidedEvent) => void;
+  /**
+   * Multisample the drawing buffer. Unset lets the renderer decide from the
+   * buffer's own size — see `MSAA_PIXEL_BUDGET` in core.
+   */
+  antialias?: boolean;
+  /**
+   * Device pixels per document unit for the backing store. Defaults to the
+   * window's own `devicePixelRatio`, which is right only when the canvas is
+   * displayed at its document size. A host that CSS-scales the canvas down to
+   * fit a box must multiply that scale in, or it pays for pixels the screen
+   * cannot show — the player clamps the result to [1, 3].
+   */
+  dpr?: number;
   className?: string;
   style?: CSSProperties;
 }
 
 export const Glamour = forwardRef<GlamourHandle, GlamourProps>(function Glamour(
-  { doc, onEmit, onStroke, onPointer, onGuided, className, style },
+  { doc, onEmit, onStroke, onPointer, onGuided, antialias, dpr, className, style },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement | null>(null);
@@ -85,7 +98,7 @@ export const Glamour = forwardRef<GlamourHandle, GlamourProps>(function Glamour(
     const mount = mountRef.current;
     if (!mount) return undefined;
 
-    const player = renderGlamour(doc, mount);
+    const player = renderGlamour(doc, mount, { antialias, dpr });
     playerRef.current = player;
 
     const unsubs = [
@@ -100,7 +113,9 @@ export const Glamour = forwardRef<GlamourHandle, GlamourProps>(function Glamour(
       player.destroy();
       playerRef.current = null;
     };
-  }, [doc]);
+    // `antialias` and `dpr` sit beside `doc` on purpose: both are settled when
+    // the context is created, so changing either means building a new one.
+  }, [doc, antialias, dpr]);
 
   useImperativeHandle(
     ref,

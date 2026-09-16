@@ -735,12 +735,13 @@ class SceneCore {
     readonly canvas: HTMLCanvasElement | OffscreenCanvas,
     readonly dpr: number,
     ownsCanvas: boolean,
+    antialias?: boolean,
   ) {
     this.ownsCanvas = ownsCanvas;
     this.bg = parseColor(doc.canvas.bg, { r: 1, g: 1, b: 1, a: 0 });
     this.stage = new StageShim(canvas, doc.canvas.w, doc.canvas.h);
     this.layer = new LayerShim(this);
-    this.renderer = new GlRenderer(canvas, doc.canvas.w, doc.canvas.h, dpr);
+    this.renderer = new GlRenderer(canvas, doc.canvas.w, doc.canvas.h, dpr, antialias);
     // A restored context has no GPU state at all, so the whole scene has to be
     // repainted — and every text node must re-upload, because the renderer's
     // texture cache is keyed on raster identity.
@@ -1402,6 +1403,11 @@ export interface BuildSceneOpts {
   dpr?: number;
   /** Reuse an existing canvas instead of creating one inside `container`. */
   canvas?: HTMLCanvasElement | OffscreenCanvas;
+  /**
+   * Multisample the drawing buffer. Left unset, it is decided from the buffer's
+   * own size — see `MSAA_PIXEL_BUDGET` for the measurement behind that.
+   */
+  antialias?: boolean;
 }
 
 /**
@@ -1431,7 +1437,7 @@ export function buildScene(doc: GlamDoc, container?: unknown, opts: BuildSceneOp
     if (mount) mount.appendChild(canvas);
   }
 
-  const core = new SceneCore(doc, canvas, dpr, owns);
+  const core = new SceneCore(doc, canvas, dpr, owns, opts.antialias);
 
   // Display order mirrors Konva's layer children exactly: groups are added
   // first (in doc.groups order), then ungrouped nodes in doc.nodes order. A
